@@ -1,12 +1,7 @@
-import { Suspense } from 'react'
-import SearchClient from './SearchClient'
-
-export const dynamic = 'force-dynamic'
-
-export default function Page() {
+export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
-      <SearchClient />
-    </Suspense>
+    <div className="min-h-screen bg-white text-black flex items-center justify-center">
+      <p className="text-black/60">Search temporarily disabled.</p>
+    </div>
   )
 }
