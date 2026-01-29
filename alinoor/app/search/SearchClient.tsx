@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function SearchClient() {
   const searchParams = useSearchParams()
-  const query = searchParams.get('q') ?? ''
+  const query = searchParams.get('q')?.trim() || ''
 
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -18,7 +18,7 @@ export default function SearchClient() {
       return
     }
 
-    const run = async () => {
+    const runSearch = async () => {
       setLoading(true)
 
       const { data } = await supabase
@@ -33,18 +33,21 @@ export default function SearchClient() {
       setLoading(false)
     }
 
-    run()
+    runSearch()
   }, [query])
 
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="max-w-4xl mx-auto px-4 py-14">
-        <h1 className="text-2xl font-serif mb-2">Search</h1>
+        <h1 className="text-2xl font-serif mb-1">Search</h1>
+        <p className="text-sm text-black/60 mb-10">
+          Results for “{query}”
+        </p>
 
         {loading && <p>Searching…</p>}
 
-        {!loading && results.length === 0 && (
-          <p className="text-black/60">No results</p>
+        {!loading && results.length === 0 && query && (
+          <p className="text-black/60">No articles found.</p>
         )}
 
         <div className="space-y-8">
@@ -52,24 +55,32 @@ export default function SearchClient() {
             <Link
               key={a.id}
               href={`/article/${a.slug}`}
-              className="flex gap-4 border-b pb-6"
+              className="flex gap-5 items-start border-b border-black/10 pb-6"
             >
               {a.cover_image ? (
                 <img
                   src={a.cover_image}
-                  className="w-32 h-20 object-cover rounded"
+                  alt={a.title}
+                  className="w-36 h-24 object-cover rounded-lg border"
                 />
               ) : (
-                <div className="w-32 h-20 bg-black/5 rounded" />
+                <div className="w-36 h-24 bg-black/5 rounded-lg" />
               )}
 
               <div>
-                <h2 className="font-serif text-lg">{a.title}</h2>
+                <h2 className="text-xl font-serif font-semibold">
+                  {a.title}
+                </h2>
+
                 {a.excerpt && (
-                  <p className="text-sm text-black/70 mt-1 line-clamp-2">
+                  <p className="text-sm text-black/70 mt-2 line-clamp-2">
                     {a.excerpt}
                   </p>
                 )}
+
+                <p className="text-xs text-black/50 mt-3">
+                  {new Date(a.created_at).toLocaleDateString()}
+                </p>
               </div>
             </Link>
           ))}
