@@ -61,7 +61,7 @@ export default function SearchClient() {
                 <img
                   src={a.cover_image}
                   alt={a.title}
-                  className="w-36 h-24 object-cover rounded-lg border"
+                  className="w-36 h-24 object-cover rounded-lg border border-black/10"
                 />
               ) : (
                 <div className="w-36 h-24 bg-black/5 rounded-lg" />
