@@ -2,189 +2,265 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import remarkBreaks from 'remark-breaks'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+import Navbar from '@/app/components/Navbar'
+
+type Article = {
+  id: string
+  title: string
+  content: string
+  excerpt: string
+  topic: string
+  cover_image: string
+  author_email: string
+  views: number
+  likes: number
+  created_at: string
+}
+
+type Profile = {
+  full_name: string
+}
 
 export default function ArticlePage() {
-  const { slug } = useParams()
+  const params = useParams()
   const router = useRouter()
-
-  const [article, setArticle] = useState<any>(null)
+  const slug = params.slug as string
+  
+  const [article, setArticle] = useState<Article | null>(null)
+  const [authorName, setAuthorName] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [liked, setLiked] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
 
   useEffect(() => {
-    const load = async () => {
-      // 🔐 Require login
-      const { data: userData } = await supabase.auth.getUser()
-      if (!userData.user) {
-        router.push('/login')
-        return
-      }
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+    })
+  }, [])
 
-      // 📄 Fetch article
-      const { data } = await supabase
+  useEffect(() => {
+    const loadArticle = async () => {
+      const { data, error } = await supabase
         .from('articles')
         .select('*')
         .eq('slug', slug)
         .eq('status', 'approved')
         .single()
 
-      if (!data) {
-        router.push('/404')
+      if (error || !data) {
+        router.push('/')
         return
       }
 
-      // 👁 Increment views (once per user)
-      await supabase.rpc('increment_article_views', {
-        p_article_id: data.id,
-      })
-
       setArticle(data)
+
+      // Get author name from profiles
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('email', data.author_email)
+        .single()
+
+      if (profileData) {
+        setAuthorName(profileData.full_name)
+      } else {
+        setAuthorName(data.author_email.split('@')[0])
+      }
+
       setLoading(false)
+
+      // Increment views
+      if (user) {
+        await supabase.rpc('increment_article_views', { p_article_id: data.id })
+      }
+
+      // Check if liked
+      if (user) {
+        const { data: likeData } = await supabase
+          .from('article_likes')
+          .select('id')
+          .eq('article_id', data.id)
+          .eq('user_id', user.id)
+          .single()
+        
+        setLiked(!!likeData)
+      }
+
+      // Check if bookmarked
+      if (user) {
+        const { data: bookmarkData } = await supabase
+          .from('bookmarks')
+          .select('id')
+          .eq('article_id', data.id)
+          .eq('user_id', user.id)
+          .single()
+        
+        setBookmarked(!!bookmarkData)
+      }
     }
 
-    load()
-  }, [slug, router])
+    if (slug) {
+      loadArticle()
+    }
+  }, [slug, user, router])
 
-  if (loading) return <div className="min-h-screen bg-white" />
+  const toggleLike = async () => {
+    if (!user || !article) {
+      router.push('/login')
+      return
+    }
 
-  const readingTime = Math.max(
-    1,
-    Math.ceil(article.content.split(/\s+/).length / 200)
-  )
+    const wasLiked = await supabase.rpc('toggle_article_like', { 
+      p_article_id: article.id 
+    })
+
+    setLiked(!liked)
+    setArticle({
+      ...article,
+      likes: liked ? article.likes - 1 : article.likes + 1
+    })
+  }
+
+  const toggleBookmark = async () => {
+    if (!user || !article) {
+      router.push('/login')
+      return
+    }
+
+    if (bookmarked) {
+      await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('article_id', article.id)
+        .eq('user_id', user.id)
+      setBookmarked(false)
+    } else {
+      await supabase
+        .from('bookmarks')
+        .insert({ article_id: article.id, user_id: user.id })
+      setBookmarked(true)
+    }
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </>
+    )
+  }
+
+  if (!article) return null
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* ---------------- Header ---------------- */}
-      <header className="border-b border-black/20">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex justify-between">
-          <Link href="/" className="text-sm hover:underline">
-            ← Home
-          </Link>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
+        <article className="max-w-4xl mx-auto px-6 py-16">
+          
+          {/* Cover Image */}
+          {article.cover_image && (
+            <div className="mb-12 rounded-3xl overflow-hidden shadow-2xl">
+              <img
+                src={article.cover_image}
+                alt={article.title}
+                className="w-full h-96 object-cover"
+              />
+            </div>
+          )}
 
-          <span className="text-xs text-black/70">
-            Written by {article.author_email}
-          </span>
-        </div>
-      </header>
+          {/* Topic Badge */}
+          {article.topic && (
+            <div className="mb-6">
+              <span className="inline-block px-4 py-2 bg-black text-white text-sm font-bold uppercase tracking-widest rounded-full shadow-md">
+                {article.topic}
+              </span>
+            </div>
+          )}
 
-      {/* ---------------- Article (WIDE) ---------------- */}
-      <article className="max-w-4xl mx-auto px-2 py-14">
-        {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-serif font-semibold mb-3">
-          {article.title}
-        </h1>
+          {/* Title */}
+          <h1 className="text-6xl font-serif font-bold text-black mb-6 leading-tight">
+            {article.title}
+          </h1>
 
-        {/* Topic */}
-        {article.topic && (
-          <div className="mb-6">
-            <span className="inline-block text-xs border border-black/30 px-3 py-1 rounded-full">
-              {article.topic}
-            </span>
-          </div>
-        )}
-
-        {/* Meta */}
-        <div className="flex items-center gap-4 text-sm text-black/70 mb-10">
-          <span>{readingTime} min read</span>
-          <span>•</span>
-          <span>{new Date(article.created_at).toLocaleDateString()}</span>
-        </div>
-
-        {/* Cover Image */}
-        {article.cover_image && (
-          <div className="mb-14">
-            <img
-              src={article.cover_image}
-              alt={article.title}
-              className="w-full h-[420px] object-cover rounded-2xl border border-black/20"
-            />
-          </div>
-        )}
-
-        {/* Content */}
-        <div
-          className="
-            prose prose-lg max-w-none
-            prose-headings:font-serif
-            prose-p:text-black
-            prose-strong:text-black
-            prose-a:text-black prose-a:underline
-            prose-code:bg-black/5 prose-code:text-black
-            prose-pre:bg-black prose-pre:text-white
-            prose-blockquote:border-l-4 prose-blockquote:border-black/30
-          "
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-            {article.content}
-          </ReactMarkdown>
-        </div>
-
-        {/* Views */}
-        <div className="mt-16 flex justify-center">
-          <div className="border border-black/30 rounded-full px-6 py-2 text-sm text-black/80">
-            👁 {article.views} views
-          </div>
-        </div>
-
-        {/* ---------------- Author Section (NARROW) ---------------- */}
-        <div className="mt-16 flex justify-center">
-          <div className="w-full max-w-2xl bg-[#fafafa] rounded-2xl px-8 py-8 flex items-center gap-6">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-medium text-gray-700">
-              {article.author_email?.[0]?.toUpperCase()}
+          {/* Meta Info */}
+          <div className="flex items-center justify-between mb-12 pb-8 border-b border-black/10">
+            <div className="flex items-center gap-4 text-gray-500">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full border-2 border-black bg-white text-black flex items-center justify-center text-sm font-black">
+                  {authorName[0]?.toUpperCase()}
+                </div>
+                <span className="font-medium">{authorName}</span>
+              </div>
+              <span>•</span>
+              <span>
+                {new Date(article.created_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </span>
             </div>
 
-            {/* Text */}
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Written by</p>
-              <p className="text-xl font-semibold text-black">
-                {article.author_email}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Writer at Alinoor
-              </p>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      {/* ---------------- Footer (NARROW) ---------------- */}
-      <footer className="border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-2 py-14">
-          {/* Top */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-            <div>
-              <h3 className="text-xl font-serif font-semibold text-black mb-2">
-                Alinoor
-              </h3>
-              <p className="text-gray-600">
-                Thoughtful writing, ideas that matter.
-              </p>
-            </div>
-
-            <div className="flex gap-8 text-gray-600">
-              <a href="/" className="hover:text-black transition">
-                Home
-              </a>
-              <a href="/write" className="hover:text-black transition">
-                Write
-              </a>
+            <div className="flex items-center gap-6 text-gray-500">
+              <span className="flex items-center gap-2">
+                <span>👁️</span>
+                {article.views || 0}
+              </span>
+              <span className="flex items-center gap-2">
+                <span>❤️</span>
+                {article.likes || 0}
+              </span>
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="mt-12 border-t border-gray-200" />
+          {/* Action Buttons */}
+          <div className="flex gap-3 mb-12">
+            <button
+              onClick={toggleLike}
+              className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
+                liked 
+                  ? 'bg-red-500 text-white hover:bg-red-600' 
+                  : 'border border-black/20 hover:bg-black/5'
+              }`}
+            >
+              {liked ? '❤️ Liked' : '🤍 Like'}
+            </button>
 
-          {/* Bottom */}
-          <div className="mt-8 text-center text-gray-500">
-            © 2026 Alinoor. All rights reserved.
+            <button
+              onClick={toggleBookmark}
+              className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
+                bookmarked 
+                  ? 'bg-black text-white hover:bg-gray-800' 
+                  : 'border border-black/20 hover:bg-black/5'
+              }`}
+            >
+              {bookmarked ? '📖 Bookmarked' : '🔖 Bookmark'}
+            </button>
           </div>
-        </div>
-      </footer>
-    </div>
+
+          {/* Content */}
+          <div className="prose prose-lg max-w-none mb-16">
+            <div className="text-xl leading-relaxed text-gray-700 whitespace-pre-wrap font-light">
+              {article.content}
+            </div>
+          </div>
+
+          {/* Back Link */}
+          <div className="pt-8 border-t border-black/10">
+            <Link href="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium">
+              <span>←</span>
+              <span>Back to home</span>
+            </Link>
+          </div>
+        </article>
+      </div>
+    </>
   )
 }
