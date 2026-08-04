@@ -130,7 +130,7 @@ export default function MyArticlesPage() {
                   <div className="flex gap-2 flex-shrink-0">
                     {article.status === 'approved' && (
                       <Link
-                        href={`/article/${article.slug}`}
+                        href={`/article?slug=${article.slug}`}
                         className="px-3.5 py-1.5 rounded-lg border border-line text-xs font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"
                       >
                         View

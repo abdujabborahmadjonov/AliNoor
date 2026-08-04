@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/app/components/Navbar'
@@ -19,14 +19,12 @@ type Article = {
   created_at: string
 }
 
-type Profile = {
-  full_name: string
-}
-
-export default function ArticlePage() {
-  const params = useParams()
+// The article is addressed as /article?slug=… so the page can be statically
+// exported (GitHub Pages has no server to resolve dynamic /article/[slug]).
+function ArticleReader() {
+  const searchParams = useSearchParams()
   const router = useRouter()
-  const slug = params.slug as string
+  const slug = searchParams.get('slug') || ''
 
   const [article, setArticle] = useState<Article | null>(null)
   const [authorName, setAuthorName] = useState<string>('')
@@ -104,6 +102,8 @@ export default function ArticlePage() {
 
     if (slug) {
       loadArticle()
+    } else {
+      router.push('/')
     }
   }, [slug, user, router])
 
@@ -113,7 +113,7 @@ export default function ArticlePage() {
       return
     }
 
-    const wasLiked = await supabase.rpc('toggle_article_like', {
+    await supabase.rpc('toggle_article_like', {
       p_article_id: article.id
     })
 
@@ -252,5 +252,19 @@ export default function ArticlePage() {
         </article>
       </div>
     </>
+  )
+}
+
+export default function ArticlePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <ArticleReader />
+    </Suspense>
   )
 }

@@ -154,7 +154,7 @@ export default function BookmarksPage() {
                         <span className="microlabel block mb-2">{article.topic}</span>
                       )}
 
-                      <Link href={`/article/${article.slug}`}>
+                      <Link href={`/article?slug=${article.slug}`}>
                         <h2 className="text-xl font-medium text-ink mb-2 group-hover:text-ink2 transition-colors leading-snug">
                           {article.title}
                         </h2>
@@ -182,7 +182,7 @@ export default function BookmarksPage() {
 
                   <div className="flex gap-2.5 mt-4 pt-4 border-t border-line">
                     <Link
-                      href={`/article/${article.slug}`}
+                      href={`/article?slug=${article.slug}`}
                       className="px-3.5 py-1.5 rounded-lg border border-line text-xs font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"
                     >
                       Read essay

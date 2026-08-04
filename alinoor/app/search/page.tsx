@@ -117,7 +117,7 @@ function SearchResults() {
             {articles.map((article, index) => (
               <Link
                 key={article.id}
-                href={`/article/${article.slug}`}
+                href={`/article?slug=${article.slug}`}
                 className="block group bg-panel rounded-xl border border-line p-6 hover:border-linestrong transition-colors shadow-card animate-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >

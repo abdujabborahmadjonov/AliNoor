@@ -139,7 +139,7 @@ export default function Home() {
             {articles.map((article, index) => (
               <Link
                 key={article.id}
-                href={`/article/${article.slug}`}
+                href={`/article?slug=${article.slug}`}
                 className="group block animate-in"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
