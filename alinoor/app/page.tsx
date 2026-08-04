@@ -53,7 +53,6 @@ export default function Home() {
         .order('created_at', { ascending: false })
 
       if (data) {
-        // Get author names for all articles
         const articlesWithAuthors = await Promise.all(
           data.map(async (article) => {
             const { data: profile } = await supabase
@@ -78,145 +77,115 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
-        {/* HERO SECTION */}
-        <section className="relative overflow-hidden">
-          {/* Subtle background pattern */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, black 1px, transparent 0)`,
-            backgroundSize: '32px 32px'
-          }}></div>
-          
-          <div className="max-w-6xl mx-auto px-6 py-32 sm:py-40 text-center relative">
-            {/* Animated logo */}
-            <div className="inline-block mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-black/5 via-black/10 to-black/5 rounded-full blur-2xl"></div>
-                <div className="relative w-24 h-24 rounded-full bg-black flex items-center justify-center mx-auto shadow-2xl">
-                  <span className="text-5xl text-white font-black">A</span>
-                </div>
-              </div>
-            </div>
-            
-            <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-bold mb-8 tracking-tight leading-none text-black animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
-              AliNoor
+      <div className="min-h-screen bg-bg">
+        {/* HERO */}
+        <section className="border-b border-line">
+          <div className="max-w-6xl mx-auto px-6 pt-24 pb-20 sm:pt-32 sm:pb-28">
+            <p className="microlabel mb-6 animate-in">a home for thoughtful writing</p>
+
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-medium tracking-tight leading-[1.05] text-ink max-w-3xl animate-in">
+              Write in the quiet.
+              <br />
+              Read in the <span className="relative inline-block">light<span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-ember/60 rounded-full"></span></span>.
             </h1>
-            
-            <p className="text-xl sm:text-2xl md:text-3xl text-gray-600 font-light mb-16 max-w-3xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              A place for thoughtful writing.<br className="hidden sm:block"/>
-              <span className="text-black font-normal">Ideas that matter, stories that stay.</span>
+
+            <p className="mt-8 text-lg sm:text-xl text-ink3 max-w-xl leading-relaxed animate-in">
+              AliNoor is a calm place for essays and stories — no feeds, no noise.
+              Ideas that matter, written slowly and read whole.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 animate-in">
               <Link
                 href="/write"
-                className="group relative px-10 py-4 bg-black text-white rounded-full font-semibold text-lg hover:bg-gray-900 transition-all shadow-lg hover:shadow-2xl hover:scale-105 duration-300 w-full sm:w-auto overflow-hidden"
+                className="px-6 py-3 bg-ink text-bg rounded-lg font-medium text-sm hover:opacity-85 transition-opacity text-center"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <span>Start Writing</span>
-                  <span className="transition-transform group-hover:translate-x-1 duration-300">→</span>
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                Start writing →
               </Link>
-
               {!loading && !user && (
                 <Link
                   href="/login"
-                  className="px-10 py-4 border-2 border-black/20 rounded-full font-semibold text-lg hover:bg-black/5 hover:border-black transition-all duration-300 w-full sm:w-auto backdrop-blur-sm"
+                  className="px-6 py-3 border border-line rounded-lg font-medium text-sm text-ink2 hover:border-linestrong hover:text-ink transition-colors text-center"
                 >
-                  Sign In
+                  Sign in
                 </Link>
               )}
             </div>
-          </div>
 
-          {/* Decorative wave */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent"></div>
+            <p className="mt-12 font-hand text-2xl text-mute rotate-[-1deg] inline-block animate-in">
+              nūr — light, the kind you read by
+            </p>
+          </div>
         </section>
 
-        {/* SECTION DIVIDER */}
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="flex items-center gap-6 mb-16">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-black/20 to-transparent"></div>
-            <div className="relative">
-              <div className="absolute -inset-2 bg-black/5 rounded-full blur"></div>
-              <span className="relative text-sm font-bold tracking-[0.3em] uppercase text-black/60 px-6">
-                Latest Stories
-              </span>
-            </div>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-black/20 to-transparent"></div>
+        {/* LATEST */}
+        <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <div className="flex items-baseline justify-between mb-10">
+            <h2 className="microlabel">latest essays</h2>
+            <span className="font-mono text-[11px] text-faint">
+              {articles.length > 0 ? `${articles.length} published` : ''}
+            </span>
           </div>
-        </div>
 
-        {/* ARTICLES GRID */}
-        <section className="max-w-7xl mx-auto px-6 pb-32">
           {articles.length === 0 && (
-            <div className="text-center py-24">
-              <div className="inline-block relative mb-8">
-                <div className="absolute -inset-4 bg-black/5 rounded-full blur-xl"></div>
-                <div className="relative w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center border border-black/10 shadow-xl">
-                  <span className="text-7xl text-gray-300 font-black">□</span>
-                </div>
-              </div>
-              <p className="text-2xl font-serif font-bold text-gray-400 mb-3">No articles yet</p>
-              <p className="text-gray-500 font-light text-lg">Be the first to write and share your story.</p>
+            <div className="border border-dashed border-linestrong rounded-xl py-20 text-center">
+              <p className="text-lg text-ink3 mb-1">Nothing here yet.</p>
+              <p className="font-hand text-2xl text-mute">
+                be the first to write something
+              </p>
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {articles.map((article, index) => (
               <Link
                 key={article.id}
                 href={`/article/${article.slug}`}
-                className="group block animate-in fade-in slide-in-from-bottom-4 duration-700"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="group block animate-in"
+                style={{ animationDelay: `${index * 80}ms` }}
               >
-                <article className="h-full bg-white rounded-3xl overflow-hidden border border-black/10 hover:border-black/20 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
+                <article className="h-full bg-panel rounded-xl overflow-hidden border border-line hover:border-linestrong transition-colors shadow-card flex flex-col">
                   {article.cover_image ? (
-                    <div className="relative h-64 overflow-hidden bg-gray-100">
+                    <div className="relative h-44 overflow-hidden bg-panel2 border-b border-line">
                       <img
                         src={article.cover_image}
                         alt={article.title}
-                        className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     </div>
                   ) : (
-                    <div className="h-64 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 flex items-center justify-center border-b border-black/10">
-                      <span className="text-8xl font-black text-black/5">A</span>
+                    <div className="h-44 bg-panel2 border-b border-line flex items-center justify-center">
+                      <span className="font-hand text-4xl text-faint">aن</span>
                     </div>
                   )}
 
-                  <div className="p-8">
+                  <div className="p-6 flex flex-col flex-1">
                     {article.topic && (
-                      <span className="inline-block px-4 py-1.5 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-full mb-4 shadow-md">
-                        {article.topic}
-                      </span>
+                      <span className="microlabel mb-3">{article.topic}</span>
                     )}
-                    
-                    <h3 className="font-serif text-2xl font-bold mb-4 leading-tight group-hover:text-gray-700 transition-colors duration-300">
+
+                    <h3 className="text-xl font-medium mb-3 leading-snug text-ink group-hover:text-ink2 transition-colors">
                       {article.title}
                     </h3>
-                    
-                    <p className="text-gray-600 leading-relaxed line-clamp-3 mb-6 font-light">
-                      {article.excerpt || 'Click to read this article...'}
+
+                    <p className="text-sm text-ink3 leading-relaxed line-clamp-3 mb-5">
+                      {article.excerpt || 'Read this essay…'}
                     </p>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-black/5">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-400 group-hover:text-black transition-colors">
-                        <span>Read more</span>
-                        <span className="transition-transform group-hover:translate-x-1 duration-300">→</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full border-2 border-black bg-white text-black flex items-center justify-center text-xs font-black shadow-sm group-hover:shadow-md transition-shadow">
+                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-line">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-md border border-linestrong bg-panel2 text-ink2 flex items-center justify-center text-[11px] font-semibold flex-shrink-0">
                           {article.author_name[0]?.toUpperCase()}
                         </div>
-                        <span className="text-xs text-gray-500 font-medium max-w-[100px] truncate">
+                        <span className="text-xs text-mute truncate">
                           {article.author_name}
                         </span>
                       </div>
+                      <span className="font-mono text-[11px] text-faint flex-shrink-0">
+                        {new Date(article.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
                     </div>
                   </div>
                 </article>
@@ -226,89 +195,80 @@ export default function Home() {
         </section>
 
         {/* FOOTER */}
-        <footer className="border-t border-black/10 bg-gradient-to-b from-white to-gray-50/50">
-          <div className="max-w-7xl mx-auto px-6 py-16">
-            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-12 mb-12">
+        <footer className="border-t border-line bg-panel2/60">
+          <div className="max-w-6xl mx-auto px-6 py-14">
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10 mb-12">
               <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shadow-lg">
-                    <span className="text-white text-lg font-black">A</span>
-                  </div>
-                  <h4 className="font-serif font-bold text-xl">AliNoor</h4>
-                </div>
-                <p className="text-sm text-gray-600 font-light leading-relaxed">
-                  A platform for thoughtful writers and curious readers.
+                <p className="font-semibold text-lg text-ink mb-2">alinoor</p>
+                <p className="text-sm text-ink3 leading-relaxed">
+                  A quiet platform for thoughtful writers and curious readers.
                 </p>
               </div>
 
               <div>
-                <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-black/80">Platform</h4>
-                <ul className="space-y-3 text-sm">
+                <h4 className="microlabel mb-4">Platform</h4>
+                <ul className="space-y-2.5 text-sm">
                   <li>
-                    <Link href="/write" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Start Writing
+                    <Link href="/write" className="text-ink3 hover:text-ink transition-colors">
+                      Start writing
                     </Link>
                   </li>
                   <li>
-                    <Link href="/topics" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Browse Topics
+                    <Link href="/search" className="text-ink3 hover:text-ink transition-colors">
+                      Search essays
                     </Link>
                   </li>
                   <li>
-                    <Link href="/about" className="text-gray-600 hover:text-black font-light transition-colors">
-                      About Us
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-black/80">Support</h4>
-                <ul className="space-y-3 text-sm">
-                  <li>
-                    <Link href="/help" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Help Center
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/guidelines" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Writing Guidelines
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/contact" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Contact
+                    <Link href="/bookmarks" className="text-ink3 hover:text-ink transition-colors">
+                      Bookmarks
                     </Link>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-black/80">Legal</h4>
-                <ul className="space-y-3 text-sm">
+                <h4 className="microlabel mb-4">Account</h4>
+                <ul className="space-y-2.5 text-sm">
                   <li>
-                    <Link href="/privacy" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Privacy Policy
+                    <Link href="/login" className="text-ink3 hover:text-ink transition-colors">
+                      Sign in
                     </Link>
                   </li>
                   <li>
-                    <Link href="/terms" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Terms of Service
+                    <Link href="/signup" className="text-ink3 hover:text-ink transition-colors">
+                      Create account
                     </Link>
                   </li>
                   <li>
-                    <Link href="/cookies" className="text-gray-600 hover:text-black font-light transition-colors">
-                      Cookie Policy
+                    <Link href="/my-articles" className="text-ink3 hover:text-ink transition-colors">
+                      My articles
                     </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="microlabel mb-4">Elsewhere</h4>
+                <ul className="space-y-2.5 text-sm">
+                  <li>
+                    <a
+                      href="https://github.com/abdujabborahmadjonov/AliNoor"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-ink3 hover:text-ink transition-colors"
+                    >
+                      GitHub
+                    </a>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="pt-8 border-t border-black/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-gray-500 font-light">
-                © 2024 AliNoor. All rights reserved.
+            <div className="pt-8 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="font-mono text-[11px] text-faint">
+                © {new Date().getFullYear()} AliNoor
               </p>
+              <p className="font-hand text-xl text-mute">written slowly, read whole</p>
             </div>
           </div>
         </footer>

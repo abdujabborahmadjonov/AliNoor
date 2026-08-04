@@ -27,7 +27,7 @@ export default function ArticlePage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  
+
   const [article, setArticle] = useState<Article | null>(null)
   const [authorName, setAuthorName] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -85,7 +85,7 @@ export default function ArticlePage() {
           .eq('article_id', data.id)
           .eq('user_id', user.id)
           .single()
-        
+
         setLiked(!!likeData)
       }
 
@@ -97,7 +97,7 @@ export default function ArticlePage() {
           .eq('article_id', data.id)
           .eq('user_id', user.id)
           .single()
-        
+
         setBookmarked(!!bookmarkData)
       }
     }
@@ -113,8 +113,8 @@ export default function ArticlePage() {
       return
     }
 
-    const wasLiked = await supabase.rpc('toggle_article_like', { 
-      p_article_id: article.id 
+    const wasLiked = await supabase.rpc('toggle_article_like', {
+      p_article_id: article.id
     })
 
     setLiked(!liked)
@@ -149,8 +149,8 @@ export default function ArticlePage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
         </div>
       </>
     )
@@ -161,100 +161,90 @@ export default function ArticlePage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
-        <article className="max-w-4xl mx-auto px-6 py-16">
-          
-          {/* Cover Image */}
+      <div className="min-h-screen bg-bg">
+        <article className="max-w-3xl mx-auto px-6 py-14 sm:py-20">
+
+          {/* Topic + date eyebrow */}
+          <div className="flex items-center gap-3 mb-5">
+            {article.topic && <span className="microlabel">{article.topic}</span>}
+            <span className="font-mono text-[11px] text-faint">
+              {new Date(article.created_at).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-4xl sm:text-5xl font-medium tracking-tight text-ink mb-8 leading-[1.1]">
+            {article.title}
+          </h1>
+
+          {/* Cover image */}
           {article.cover_image && (
-            <div className="mb-12 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="mb-10 rounded-xl overflow-hidden border border-line">
               <img
                 src={article.cover_image}
                 alt={article.title}
-                className="w-full h-96 object-cover"
+                className="w-full max-h-96 object-cover"
               />
             </div>
           )}
 
-          {/* Topic Badge */}
-          {article.topic && (
-            <div className="mb-6">
-              <span className="inline-block px-4 py-2 bg-black text-white text-sm font-bold uppercase tracking-widest rounded-full shadow-md">
-                {article.topic}
-              </span>
-            </div>
-          )}
-
-          {/* Title */}
-          <h1 className="text-6xl font-serif font-bold text-black mb-6 leading-tight">
-            {article.title}
-          </h1>
-
-          {/* Meta Info */}
-          <div className="flex items-center justify-between mb-12 pb-8 border-b border-black/10">
-            <div className="flex items-center gap-4 text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full border-2 border-black bg-white text-black flex items-center justify-center text-sm font-black">
-                  {authorName[0]?.toUpperCase()}
-                </div>
-                <span className="font-medium">{authorName}</span>
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-line">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md border border-linestrong bg-panel2 text-ink2 flex items-center justify-center text-xs font-semibold">
+                {authorName[0]?.toUpperCase()}
               </div>
-              <span>•</span>
-              <span>
-                {new Date(article.created_at).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </span>
+              <span className="text-sm text-ink2 font-medium">{authorName}</span>
             </div>
 
-            <div className="flex items-center gap-6 text-gray-500">
-              <span className="flex items-center gap-2">
-                <span>👁️</span>
-                {article.views || 0}
-              </span>
-              <span className="flex items-center gap-2">
-                <span>❤️</span>
-                {article.likes || 0}
-              </span>
+            <div className="flex items-center gap-4 font-mono text-[11px] text-mute">
+              <span>{article.views || 0} views</span>
+              <span>{article.likes || 0} likes</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 mb-12">
+          {/* Actions */}
+          <div className="flex gap-2.5 mb-12">
             <button
               onClick={toggleLike}
-              className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
-                liked 
-                  ? 'bg-red-500 text-white hover:bg-red-600' 
-                  : 'border border-black/20 hover:bg-black/5'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                liked
+                  ? 'bg-ember/10 border-ember/40 text-ember'
+                  : 'border-line text-ink2 hover:border-linestrong hover:text-ink'
               }`}
             >
-              {liked ? '❤️ Liked' : '🤍 Like'}
+              {liked ? '♥ Liked' : '♡ Like'}
             </button>
 
             <button
               onClick={toggleBookmark}
-              className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
-                bookmarked 
-                  ? 'bg-black text-white hover:bg-gray-800' 
-                  : 'border border-black/20 hover:bg-black/5'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                bookmarked
+                  ? 'bg-ink text-bg border-ink'
+                  : 'border-line text-ink2 hover:border-linestrong hover:text-ink'
               }`}
             >
-              {bookmarked ? '📖 Bookmarked' : '🔖 Bookmark'}
+              {bookmarked ? 'Bookmarked' : 'Bookmark'}
             </button>
           </div>
 
           {/* Content */}
-          <div className="prose prose-lg max-w-none mb-16">
-            <div className="text-xl leading-relaxed text-gray-700 whitespace-pre-wrap font-light">
+          <div className="mb-16">
+            <div className="text-lg leading-[1.8] text-ink2 whitespace-pre-wrap">
               {article.content}
             </div>
           </div>
 
-          {/* Back Link */}
-          <div className="pt-8 border-t border-black/10">
-            <Link href="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium">
+          {/* Back link */}
+          <div className="pt-6 border-t border-line">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
+            >
               <span>←</span>
               <span>Back to home</span>
             </Link>

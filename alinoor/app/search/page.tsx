@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -21,7 +21,7 @@ type ArticleWithAuthor = Article & {
   author_name: string
 }
 
-export default function SearchPage() {
+function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
   const [articles, setArticles] = useState<ArticleWithAuthor[]>([])
@@ -73,48 +73,42 @@ export default function SearchPage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
-        <div className="max-w-5xl mx-auto px-6 py-16">
-          
-          <div className="mb-12">
-            <h1 className="text-5xl font-serif font-bold text-black mb-4">
-              Search Results
+      <div className="min-h-screen bg-bg">
+        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
+
+          <div className="mb-10">
+            <p className="microlabel mb-3">search</p>
+            <h1 className="text-4xl font-medium tracking-tight text-ink mb-2">
+              Results
             </h1>
             {query && (
-              <p className="text-gray-500 font-light text-lg">
-                Showing results for: <span className="font-semibold text-black">"{query}"</span>
+              <p className="text-sm text-mute">
+                Showing results for{' '}
+                <span className="font-mono text-ink">&ldquo;{query}&rdquo;</span>
               </p>
             )}
           </div>
 
           {loading && (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-black font-medium">Searching...</p>
+            <div className="text-center py-16">
+              <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-sm text-mute">Searching…</p>
             </div>
           )}
 
           {!loading && !query && (
-            <div className="text-center py-20">
-              <p className="text-xl font-serif text-gray-400">
-                Enter a search term to find articles
+            <div className="border border-dashed border-linestrong rounded-xl py-16 text-center">
+              <p className="text-lg text-ink3">
+                Enter a search term to find essays.
               </p>
             </div>
           )}
 
           {!loading && query && articles.length === 0 && (
-            <div className="text-center py-20">
-              <div className="inline-block relative mb-8">
-                <div className="absolute -inset-4 bg-black/5 rounded-full blur-xl"></div>
-                <div className="relative w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center border border-black/10 shadow-lg">
-                  <span className="text-6xl text-gray-300 font-black">🔍</span>
-                </div>
-              </div>
-              <p className="text-xl font-serif text-gray-400 mb-2">
-                No articles found
-              </p>
-              <p className="text-gray-500 font-light">
-                Try searching with different keywords
+            <div className="border border-dashed border-linestrong rounded-xl py-16 text-center">
+              <p className="text-lg text-ink3 mb-1">No essays found.</p>
+              <p className="font-hand text-2xl text-mute">
+                try a different word
               </p>
             </div>
           )}
@@ -124,38 +118,30 @@ export default function SearchPage() {
               <Link
                 key={article.id}
                 href={`/article/${article.slug}`}
-                className="block group bg-white rounded-2xl border border-black/10 p-6 hover:border-black/20 hover:shadow-xl transition-all duration-300"
+                className="block group bg-panel rounded-xl border border-line p-6 hover:border-linestrong transition-colors shadow-card animate-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between gap-6">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     {article.topic && (
-                      <span className="inline-block px-3 py-1 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-full mb-3 shadow-sm">
-                        {article.topic}
-                      </span>
+                      <span className="microlabel block mb-2">{article.topic}</span>
                     )}
-                    
-                    <h2 className="text-2xl font-serif font-bold text-black mb-2 group-hover:text-gray-700 transition-colors">
+
+                    <h2 className="text-xl font-medium text-ink mb-2 group-hover:text-ink2 transition-colors leading-snug">
                       {article.title}
                     </h2>
-                    
+
                     {article.excerpt && (
-                      <p className="text-gray-600 leading-relaxed line-clamp-2 mb-3 font-light">
+                      <p className="text-sm text-ink3 leading-relaxed line-clamp-2 mb-3">
                         {article.excerpt}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <span>✍️</span>
-                        {article.author_name}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <span>👁️</span>
-                        {article.views || 0} views
-                      </span>
-                      <span>•</span>
+                    <div className="flex items-center gap-3 font-mono text-[11px] text-mute">
+                      <span>{article.author_name}</span>
+                      <span className="text-faint">·</span>
+                      <span>{article.views || 0} views</span>
+                      <span className="text-faint">·</span>
                       <span>
                         {new Date(article.created_at).toLocaleDateString('en-US', {
                           month: 'short',
@@ -166,18 +152,19 @@ export default function SearchPage() {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full border-2 border-black bg-white text-black flex items-center justify-center text-lg font-black shadow-sm">
-                      {article.author_name[0]?.toUpperCase()}
-                    </div>
+                  <div className="w-9 h-9 rounded-md border border-linestrong bg-panel2 text-ink2 flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    {article.author_name[0]?.toUpperCase()}
                   </div>
                 </div>
               </Link>
             ))}
           </div>
 
-          <div className="mt-16 pt-8 border-t border-black/10">
-            <Link href="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium">
+          <div className="mt-14 pt-6 border-t border-line">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
+            >
               <span>←</span>
               <span>Back home</span>
             </Link>
@@ -185,5 +172,19 @@ export default function SearchPage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <SearchResults />
+    </Suspense>
   )
 }

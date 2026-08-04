@@ -33,10 +33,10 @@ export default function AuthCallback() {
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen bg-bg flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-zinc-600">Signing you in…</p>
+        <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-sm text-mute">Signing you in…</p>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/app/components/Navbar'
@@ -19,16 +19,19 @@ const TOPICS = [
   'Other'
 ]
 
-export default function WritePage() {
+const inputClass =
+  'w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors'
+
+function WriteForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('edit')
-  
+
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [articleId, setArticleId] = useState<string | null>(null)
-  
+
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
@@ -144,8 +147,8 @@ export default function WritePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -153,46 +156,40 @@ export default function WritePage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
-        <div className="max-w-4xl mx-auto px-6 py-16">
-          
-          <div className="mb-12">
-            <h1 className="text-5xl font-serif font-bold text-black mb-2">
-              {isEditMode ? 'Edit Article' : 'Write Your Story'}
+      <div className="min-h-screen bg-bg">
+        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
+
+          <div className="mb-10">
+            <p className="microlabel mb-3">
+              {isEditMode ? 'editing' : 'new essay'}
+            </p>
+            <h1 className="text-4xl font-medium tracking-tight text-ink mb-2">
+              {isEditMode ? 'Edit article' : 'Write your story'}
             </h1>
-            <p className="text-gray-500 font-light">
-              Share your thoughts with the world
+            <p className="font-hand text-2xl text-mute">
+              slowly is fine — say it well
             </p>
           </div>
 
-          <div className="bg-white rounded-3xl border border-black/10 p-8 shadow-xl mb-8">
-            
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Title *
-              </label>
+          <div className="bg-panel rounded-xl border border-line p-6 sm:p-8 shadow-card mb-8">
+
+            <div className="mb-5">
+              <label className="microlabel block mb-2">Title *</label>
               <input
                 type="text"
-                placeholder="Give your article a title..."
+                placeholder="Give your essay a title…"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                         text-black placeholder:text-gray-400 text-2xl font-serif font-bold
-                         focus:outline-none focus:border-black focus:shadow-lg
-                         transition-all duration-300 bg-white"
+                className={`${inputClass} !text-xl !py-3 font-medium`}
               />
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Topic *
-              </label>
+            <div className="mb-5">
+              <label className="microlabel block mb-2">Topic *</label>
               <select
                 value={formData.topic}
                 onChange={(e) => setFormData({...formData, topic: e.target.value})}
-                className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                         text-black focus:outline-none focus:border-black focus:shadow-lg
-                         transition-all duration-300 bg-white"
+                className={inputClass}
               >
                 {TOPICS.map(topic => (
                   <option key={topic} value={topic}>{topic}</option>
@@ -200,51 +197,36 @@ export default function WritePage() {
               </select>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Excerpt (Optional)
-              </label>
+            <div className="mb-5">
+              <label className="microlabel block mb-2">Excerpt (optional)</label>
               <textarea
-                placeholder="A brief summary of your article..."
+                placeholder="A brief summary of your essay…"
                 value={formData.excerpt}
                 onChange={(e) => setFormData({...formData, excerpt: e.target.value})}
                 rows={3}
-                className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                         text-black placeholder:text-gray-400
-                         focus:outline-none focus:border-black focus:shadow-lg
-                         transition-all duration-300 bg-white resize-none"
+                className={`${inputClass} resize-none`}
               />
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Cover Image URL (Optional)
-              </label>
+            <div className="mb-5">
+              <label className="microlabel block mb-2">Cover image URL (optional)</label>
               <input
                 type="url"
                 placeholder="https://example.com/image.jpg"
                 value={formData.cover_image}
                 onChange={(e) => setFormData({...formData, cover_image: e.target.value})}
-                className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                         text-black placeholder:text-gray-400
-                         focus:outline-none focus:border-black focus:shadow-lg
-                         transition-all duration-300 bg-white"
+                className={inputClass}
               />
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Content *
-              </label>
+              <label className="microlabel block mb-2">Content *</label>
               <textarea
-                placeholder="Start writing your story..."
+                placeholder="Start writing…"
                 value={formData.content}
                 onChange={(e) => setFormData({...formData, content: e.target.value})}
                 rows={20}
-                className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                         text-black placeholder:text-gray-400 leading-relaxed
-                         focus:outline-none focus:border-black focus:shadow-lg
-                         transition-all duration-300 bg-white resize-none font-light"
+                className={`${inputClass} resize-none leading-relaxed`}
               />
             </div>
 
@@ -252,21 +234,17 @@ export default function WritePage() {
               <button
                 onClick={() => handleSubmit('draft')}
                 disabled={loading}
-                className="flex-1 border border-black/20 py-4 rounded-2xl font-semibold
-                         hover:bg-black/5 hover:border-black transition-all duration-300
-                         disabled:opacity-50 shadow-sm hover:shadow-md"
+                className="flex-1 border border-line py-3 rounded-lg text-sm font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save Draft'}
+                {loading ? 'Saving…' : 'Save draft'}
               </button>
 
               <button
                 onClick={() => handleSubmit('pending')}
                 disabled={loading}
-                className="flex-1 bg-black text-white py-4 rounded-2xl font-semibold
-                         hover:bg-gray-800 transition-all duration-300 disabled:opacity-50
-                         shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                className="flex-1 bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50"
               >
-                {loading ? 'Publishing...' : 'Publish Article'}
+                {loading ? 'Publishing…' : 'Publish article'}
               </button>
             </div>
           </div>
@@ -274,7 +252,7 @@ export default function WritePage() {
           <div className="text-center">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium"
+              className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
             >
               <span>←</span>
               <span>Cancel</span>
@@ -283,5 +261,19 @@ export default function WritePage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function WritePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <WriteForm />
+    </Suspense>
   )
 }

@@ -29,7 +29,7 @@ export default function LoginPage() {
       .select('full_name')
       .eq('id', userId)
       .single()
-    
+
     if (!profile || !profile.full_name) {
       router.push('/complete-profile')
     } else {
@@ -59,80 +59,58 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center px-4 py-12">
-      <div className="absolute inset-0 opacity-[0.02]" style={{
-        backgroundImage: `radial-gradient(circle at 2px 2px, black 1px, transparent 0)`,
-        backgroundSize: '32px 32px'
-      }}></div>
+    <div className="min-h-screen bg-bg flex items-center justify-center px-4 py-12">
+      <main className="w-full max-w-md">
+        <div className="bg-panel border border-line rounded-xl p-8 sm:p-10 shadow-card">
+          <p className="microlabel text-center mb-3">alinoor</p>
 
-      <main className="relative w-full max-w-md">
-        <div className="absolute -inset-8 bg-gradient-to-r from-black/5 via-black/10 to-black/5 rounded-full blur-3xl"></div>
-        
-        <div className="relative bg-white/80 backdrop-blur-xl border border-black/10 rounded-3xl p-10 shadow-2xl">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center shadow-lg">
-              <span className="text-white text-2xl font-black">A</span>
-            </div>
-          </div>
-
-          <h1 className="text-4xl font-serif font-bold text-center text-black mb-2">
-            Welcome Back
+          <h1 className="text-3xl font-medium text-center text-ink mb-2 tracking-tight">
+            Welcome back
           </h1>
-          <p className="text-center text-gray-500 mb-10 font-light">
+          <p className="text-center text-mute text-sm mb-8">
             Sign in to continue writing
           </p>
 
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-black/20 hover:bg-black/5 hover:border-black/40 transition-all duration-300 mb-8 group shadow-sm hover:shadow-md"
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-line hover:border-linestrong bg-panel transition-colors mb-6"
           >
-            <svg width="20" height="20" viewBox="0 0 48 48">
+            <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.4 17.8 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-2.8-.4-4H24v7.6h12.7c-.6 3-2.4 5.6-5.1 7.3l7.9 6.1c4.6-4.3 6.6-10.6 6.6-17z"/>
               <path fill="#FBBC05" d="M10.5 28.4c-1-3-1-6.2 0-9.2l-7.9-6.1C-.8 17.8-.8 30.2 2.6 34.9l7.9-6.5z"/>
               <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.9-6.1c-2.2 1.5-5 2.4-7.3 2.4-6.2 0-11.6-3.9-13.5-9.4l-7.9 6.5C6.5 42.6 14.6 48 24 48z"/>
             </svg>
-
-            <span className="font-semibold text-gray-700 group-hover:text-black transition-colors">
+            <span className="text-sm font-medium text-ink2">
               Continue with Google
             </span>
           </button>
 
-          <div className="flex items-center gap-4 mb-8">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-black/20 to-transparent" />
-            <span className="text-sm text-gray-400 font-medium">or</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-black/20 to-transparent" />
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-line" />
+            <span className="font-mono text-[11px] text-faint uppercase">or</span>
+            <div className="flex-1 h-px bg-line" />
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Email address
-            </label>
+            <label className="microlabel block mb-2">Email address</label>
             <input
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                       text-black placeholder:text-gray-400
-                       focus:outline-none focus:border-black focus:shadow-lg
-                       transition-all duration-300 bg-white/50"
+              className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
             />
           </div>
 
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Password
-            </label>
+          <div className="mb-6">
+            <label className="microlabel block mb-2">Password</label>
             <input
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-3.5 border border-black/20 rounded-2xl
-                       text-black placeholder:text-gray-400
-                       focus:outline-none focus:border-black focus:shadow-lg
-                       transition-all duration-300 bg-white/50"
+              className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
             />
           </div>
 
@@ -140,34 +118,31 @@ export default function LoginPage() {
             <button
               onClick={signInWithEmail}
               disabled={loading}
-              className="flex-1 bg-black text-white py-4 rounded-2xl font-semibold
-                       hover:bg-gray-800 transition-all duration-300 disabled:opacity-50
-                       shadow-lg hover:shadow-xl hover:scale-[1.02]"
+              className="flex-1 bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50"
             >
-              Sign In
+              Sign in
             </button>
 
             <button
               onClick={handleSignUpClick}
               type="button"
-              className="flex-1 border border-black/20 py-4 rounded-2xl font-semibold
-                       hover:bg-black/5 hover:border-black transition-all duration-300
-                       shadow-sm hover:shadow-md"
+              className="flex-1 border border-line py-3 rounded-lg text-sm font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"
             >
-              Sign Up
+              Sign up
             </button>
           </div>
 
           {message && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-2xl border border-black/10">
-              <p className="text-sm text-center text-gray-600 font-medium">
-                {message}
-              </p>
+            <div className="mb-6 p-3.5 bg-panel2 rounded-lg border border-line">
+              <p className="text-sm text-center text-ink3">{message}</p>
             </div>
           )}
 
           <div className="text-center">
-            <Link href="/" className="text-sm text-gray-500 hover:text-black transition-colors font-medium inline-flex items-center gap-2">
+            <Link
+              href="/"
+              className="text-sm text-mute hover:text-ink transition-colors inline-flex items-center gap-1.5"
+            >
               <span>←</span>
               <span>Back home</span>
             </Link>

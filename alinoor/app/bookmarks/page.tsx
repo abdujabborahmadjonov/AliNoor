@@ -101,11 +101,8 @@ export default function BookmarksPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-white">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-black font-medium">Loading…</p>
-          </div>
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
         </div>
       </>
     )
@@ -114,34 +111,30 @@ export default function BookmarksPage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/30 to-white">
-        <div className="max-w-5xl mx-auto px-6 py-16">
-          
-          <div className="mb-12">
-            <h1 className="text-5xl font-serif font-bold text-black mb-2">
-              My Bookmarks
+      <div className="min-h-screen bg-bg">
+        <div className="max-w-3xl mx-auto px-6 py-14 sm:py-16">
+
+          <div className="mb-10">
+            <p className="microlabel mb-3">saved for later</p>
+            <h1 className="text-4xl font-medium tracking-tight text-ink mb-2">
+              Bookmarks
             </h1>
-            <p className="text-gray-500 font-light">
-              {bookmarks.length} {bookmarks.length === 1 ? 'article' : 'articles'} saved
+            <p className="font-mono text-[11px] text-mute">
+              {bookmarks.length} {bookmarks.length === 1 ? 'essay' : 'essays'} saved
             </p>
           </div>
 
           {bookmarks.length === 0 && (
-            <div className="text-center py-20">
-              <div className="inline-block relative mb-8">
-                <div className="absolute -inset-4 bg-black/5 rounded-full blur-xl"></div>
-                <div className="relative w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center border border-black/10 shadow-lg">
-                  <span className="text-6xl text-gray-300 font-black">🔖</span>
-                </div>
-              </div>
-              <p className="text-xl font-serif text-gray-400 mb-4">
-                No bookmarks yet
+            <div className="border border-dashed border-linestrong rounded-xl py-16 text-center">
+              <p className="text-lg text-ink3 mb-1">No bookmarks yet.</p>
+              <p className="font-hand text-2xl text-mute mb-6">
+                save what deserves a second read
               </p>
               <Link
                 href="/"
-                className="inline-block px-8 py-3 bg-black text-white rounded-full font-semibold hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                className="inline-block px-5 py-2.5 bg-ink text-bg rounded-lg text-sm font-medium hover:opacity-85 transition-opacity"
               >
-                Discover Articles
+                Discover essays
               </Link>
             </div>
           )}
@@ -152,65 +145,52 @@ export default function BookmarksPage() {
               return (
                 <div
                   key={bookmark.id}
-                  className="group bg-white rounded-2xl border border-black/10 p-6 hover:border-black/20 hover:shadow-xl transition-all duration-300"
+                  className="group bg-panel rounded-xl border border-line p-6 hover:border-linestrong transition-colors shadow-card animate-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       {article.topic && (
-                        <span className="inline-block px-3 py-1 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-full mb-3 shadow-sm">
-                          {article.topic}
-                        </span>
+                        <span className="microlabel block mb-2">{article.topic}</span>
                       )}
-                      
+
                       <Link href={`/article/${article.slug}`}>
-                        <h2 className="text-2xl font-serif font-bold text-black mb-2 group-hover:text-gray-700 transition-colors">
+                        <h2 className="text-xl font-medium text-ink mb-2 group-hover:text-ink2 transition-colors leading-snug">
                           {article.title}
                         </h2>
                       </Link>
-                      
+
                       {article.excerpt && (
-                        <p className="text-gray-600 leading-relaxed line-clamp-2 mb-3 font-light">
+                        <p className="text-sm text-ink3 leading-relaxed line-clamp-2 mb-3">
                           {article.excerpt}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <span>✍️</span>
-                          {bookmark.author_name}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <span>👁️</span>
-                          {article.views || 0}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <span>❤️</span>
-                          {article.likes || 0}
-                        </span>
+                      <div className="flex items-center gap-3 font-mono text-[11px] text-mute">
+                        <span>{bookmark.author_name}</span>
+                        <span className="text-faint">·</span>
+                        <span>{article.views || 0} views</span>
+                        <span className="text-faint">·</span>
+                        <span>{article.likes || 0} likes</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 flex-shrink-0">
-                      <div className="w-12 h-12 rounded-full border-2 border-black bg-white text-black flex items-center justify-center text-lg font-black shadow-sm">
-                        {bookmark.author_name[0]?.toUpperCase()}
-                      </div>
+                    <div className="w-9 h-9 rounded-md border border-linestrong bg-panel2 text-ink2 flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                      {bookmark.author_name[0]?.toUpperCase()}
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-black/5">
+                  <div className="flex gap-2.5 mt-4 pt-4 border-t border-line">
                     <Link
                       href={`/article/${article.slug}`}
-                      className="px-4 py-2 rounded-full border border-black/20 text-sm font-semibold hover:bg-black/5 hover:border-black transition-all duration-300"
+                      className="px-3.5 py-1.5 rounded-lg border border-line text-xs font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"
                     >
-                      Read Article
+                      Read essay
                     </Link>
 
                     <button
                       onClick={() => removeBookmark(bookmark.id)}
-                      className="px-4 py-2 rounded-full bg-red-50 border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-100 transition-all duration-300"
+                      className="px-3.5 py-1.5 rounded-lg border border-ember/30 text-ember text-xs font-medium hover:bg-ember/10 transition-colors"
                     >
                       Remove
                     </button>
@@ -220,8 +200,11 @@ export default function BookmarksPage() {
             })}
           </div>
 
-          <div className="mt-16 pt-8 border-t border-black/10">
-            <Link href="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium">
+          <div className="mt-14 pt-6 border-t border-line">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
+            >
               <span>←</span>
               <span>Back home</span>
             </Link>

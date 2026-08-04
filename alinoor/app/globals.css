@@ -2,54 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Caveat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* Warm paper palette, light by default. Values are RGB triplets so Tailwind
+   can compose them with alpha via rgb(var(--x) / <alpha-value>). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --an-bg: 250 250 247;
+  --an-panel: 255 255 255;
+  --an-panel2: 245 244 239;
+  --an-ink: 26 25 22;
+  --an-ink2: 61 59 53;
+  --an-ink3: 106 103 94;
+  --an-mute: 128 121 109;
+  --an-faint: 184 180 168;
+  --an-line: 227 225 218;
+  --an-lineStrong: 207 203 193;
+  --an-accent: 234 229 214;
+  --an-ember: 179 74 58;
+  --an-good: 74 106 72;
+  --an-warn: 138 106 58;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme='dark'] {
+  --an-bg: 22 20 15;
+  --an-panel: 28 26 22;
+  --an-panel2: 34 31 26;
+  --an-ink: 245 244 239;
+  --an-ink2: 214 210 197;
+  --an-ink3: 168 163 151;
+  --an-mute: 154 150 139;
+  --an-faint: 94 87 76;
+  --an-line: 45 42 36;
+  --an-lineStrong: 67 62 53;
+  --an-accent: 42 38 34;
+  --an-ember: 217 117 96;
+  --an-good: 127 160 120;
+  --an-warn: 212 168 104;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', system-ui, sans-serif;
+  background: rgb(var(--an-bg));
+  color: rgb(var(--an-ink));
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
 }
 
-.font-serif {
-  font-family: 'Merriweather', Georgia, serif;
+/* Small uppercase mono label used for section eyebrows and metadata */
+.microlabel {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--an-mute));
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgb(var(--an-bg));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: rgb(var(--an-lineStrong));
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgb(var(--an-faint));
 }
 
-/* Smooth scroll */
 html {
   scroll-behavior: smooth;
 }
 
-/* Animation utilities */
 @keyframes animate-in {
   from {
     opacity: 0;
