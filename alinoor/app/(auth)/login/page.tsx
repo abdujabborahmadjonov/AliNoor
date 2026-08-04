@@ -5,14 +5,33 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+// Supabase error strings are terse — translate the common ones.
+const friendlyError = (message: string) => {
+  const m = message.toLowerCase()
+  if (m.includes('invalid login credentials')) {
+    return 'Incorrect email or password. Please try again.'
+  }
+  if (m.includes('email not confirmed')) {
+    return 'Your email isn’t confirmed yet — check your inbox for the verification link.'
+  }
+  if (m.includes('missing email') || m.includes('invalid email')) {
+    return 'Please enter a valid email address.'
+  }
+  return message
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const signInWithGoogle = async () => {
+    setMessage(null)
+    setGoogleLoading(true)
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -20,7 +39,11 @@ export default function LoginPage() {
       },
     })
 
-    if (error) setMessage(error.message)
+    // On success the browser navigates away; we only get here on failure.
+    if (error) {
+      setMessage(friendlyError(error.message))
+      setGoogleLoading(false)
+    }
   }
 
   const checkProfileCompletion = async (userId: string) => {
@@ -37,25 +60,29 @@ export default function LoginPage() {
     }
   }
 
-  const signInWithEmail = async () => {
+  const signInWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !password) {
+      setMessage('Please enter your email and password.')
+      return
+    }
+
     setLoading(true)
     setMessage(null)
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: trimmedEmail,
       password,
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(friendlyError(error.message))
       setLoading(false)
     } else if (data.user) {
       await checkProfileCompletion(data.user.id)
     }
-  }
-
-  const handleSignUpClick = () => {
-    router.push('/signup')
   }
 
   return (
@@ -73,7 +100,8 @@ export default function LoginPage() {
 
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-line hover:border-linestrong bg-panel transition-colors mb-6"
+            disabled={googleLoading || loading}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-line hover:border-linestrong bg-panel transition-colors mb-6 disabled:opacity-50"
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.4 17.8 9.5 24 9.5z"/>
@@ -82,7 +110,7 @@ export default function LoginPage() {
               <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.9-6.1c-2.2 1.5-5 2.4-7.3 2.4-6.2 0-11.6-3.9-13.5-9.4l-7.9 6.5C6.5 42.6 14.6 48 24 48z"/>
             </svg>
             <span className="text-sm font-medium text-ink2">
-              Continue with Google
+              {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
             </span>
           </button>
 
@@ -92,45 +120,54 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-line" />
           </div>
 
-          <div className="mb-4">
-            <label className="microlabel block mb-2">Email address</label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
-            />
-          </div>
+          <form onSubmit={signInWithEmail}>
+            <div className="mb-4">
+              <label htmlFor="login-email" className="microlabel block mb-2">
+                Email address
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
+              />
+            </div>
 
-          <div className="mb-6">
-            <label className="microlabel block mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
-            />
-          </div>
+            <div className="mb-6">
+              <label htmlFor="login-password" className="microlabel block mb-2">
+                Password
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
+              />
+            </div>
 
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={signInWithEmail}
-              disabled={loading}
-              className="flex-1 bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50"
-            >
-              Sign in
-            </button>
+            <div className="flex gap-3 mb-6">
+              <button
+                type="submit"
+                disabled={loading || googleLoading}
+                className="flex-1 bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50"
+              >
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
 
-            <button
-              onClick={handleSignUpClick}
-              type="button"
-              className="flex-1 border border-line py-3 rounded-lg text-sm font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"
-            >
-              Sign up
-            </button>
-          </div>
+              <Link
+                href="/signup"
+                className="flex-1 border border-line py-3 rounded-lg text-sm font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors text-center"
+              >
+                Sign up
+              </Link>
+            </div>
+          </form>
 
           {message && (
             <div className="mb-6 p-3.5 bg-panel2 rounded-lg border border-line">

@@ -37,7 +37,7 @@ export default function SignupPage() {
     try {
       // Create account
       const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -50,17 +50,26 @@ export default function SignupPage() {
       if (error) throw error
 
       if (data.user) {
-        // Create profile immediately
-        await supabase.from('profiles').insert({
-          id: data.user.id,
-          email: formData.email,
-          full_name: formData.full_name,
-          country: formData.country,
-          birthdate: formData.birthdate,
-          bio: formData.bio,
-        })
+        // Only a signed-in user can insert their profile row (RLS). When
+        // email confirmation is on, signUp returns no session — the profile
+        // is created later by the complete-profile step after first sign-in.
+        if (data.session) {
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            email: formData.email.trim(),
+            full_name: formData.full_name,
+            country: formData.country,
+            birthdate: formData.birthdate,
+            bio: formData.bio,
+          })
+        }
 
-        setMessage('Account created successfully! Please check your email to verify your account, then return to sign in.')
+        const signedIn = !!data.session
+        setMessage(
+          signedIn
+            ? 'Account created successfully! Taking you home…'
+            : 'Account created successfully! Please check your email to verify your account, then return to sign in.'
+        )
 
         // Clear form
         setFormData({
@@ -72,10 +81,10 @@ export default function SignupPage() {
           bio: ''
         })
 
-        // Redirect to login after 3 seconds
+        // Signed-in users go straight home; others sign in after verifying.
         setTimeout(() => {
-          router.push('/login')
-        }, 3000)
+          router.push(signedIn ? '/' : '/login')
+        }, signedIn ? 1500 : 3000)
       }
     } catch (error: any) {
       setMessage(error.message)
