@@ -28,8 +28,25 @@ export default function ArabicPage() {
 
   return (
     <AppShell title="Arabic" subtitle="starter Qur'anic vocabulary">
-      <div className="grid md:grid-cols-[220px_1fr] gap-8">
-        <div className="space-y-1">
+      <div className="grid md:grid-cols-[220px_1fr] gap-6 md:gap-8">
+        {/* Mobile: horizontal group chips */}
+        <div className="md:hidden flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+          {ARABIC_GROUPS.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => setGroupKey(g.key)}
+              className={`flex-shrink-0 px-3.5 py-2 rounded-lg text-sm border transition-colors ${
+                g.key === groupKey
+                  ? 'bg-ink text-bg border-ink'
+                  : 'border-line text-ink2'
+              }`}
+            >
+              {g.title}
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden md:block space-y-1">
           {ARABIC_GROUPS.map((g) => (
             <button
               key={g.key}

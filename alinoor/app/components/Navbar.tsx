@@ -58,7 +58,7 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* CENTER — search */}
+          {/* CENTER — search (desktop) */}
           <form onSubmit={onSearch} className="flex-1 max-w-sm hidden md:block">
             <div className="relative group">
               <input
@@ -79,7 +79,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 relative flex-shrink-0">
             <Link
               href="/today"
-              className="hidden sm:block px-4 py-2 rounded-lg border border-line text-ink2 text-sm font-medium hover:border-linestrong hover:text-ink transition-colors"
+              className="px-3 sm:px-4 py-2 rounded-lg border border-line text-ink2 text-sm font-medium hover:border-linestrong hover:text-ink transition-colors"
             >
               Today
             </Link>
@@ -167,6 +167,23 @@ export default function Navbar() {
             )}
           </div>
         </div>
+
+        {/* Mobile search row */}
+        <form onSubmit={onSearch} className="mt-3 md:hidden">
+          <div className="relative">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search essays…"
+              className="w-full border border-line rounded-lg px-4 py-2 pl-9 text-sm bg-panel text-ink placeholder:text-faint focus:outline-none focus:border-linestrong transition-colors"
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-faint">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </form>
       </div>
     </nav>
   )

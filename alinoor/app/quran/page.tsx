@@ -171,8 +171,25 @@ export default function QuranPage() {
       </div>
 
       {mode === 'themes' && (
-        <div className="grid md:grid-cols-[220px_1fr] gap-8">
-          <div className="space-y-1">
+        <div className="grid md:grid-cols-[220px_1fr] gap-6 md:gap-8">
+          {/* Mobile: horizontal theme chips */}
+          <div className="md:hidden flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+            {QURAN_THEMES.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setThemeKey(t.key)}
+                className={`flex-shrink-0 px-3.5 py-2 rounded-lg text-sm border transition-colors ${
+                  t.key === themeKey
+                    ? 'bg-ink text-bg border-ink'
+                    : 'border-line text-ink2'
+                }`}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden md:block space-y-1">
             {QURAN_THEMES.map((t) => (
               <button
                 key={t.key}
@@ -240,8 +257,27 @@ export default function QuranPage() {
       )}
 
       {mode === 'surahs' && (
-        <div className="grid md:grid-cols-[260px_1fr] gap-8">
-          <div className="space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
+          {/* Mobile: surah dropdown */}
+          <div className="md:hidden">
+            <label className="microlabel block mb-2">Surah</label>
+            <select
+              value={surahNo}
+              onChange={(e) => {
+                setSurahNo(Number(e.target.value))
+                setOpenAyah(null)
+              }}
+              className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm focus:outline-none focus:border-linestrong"
+            >
+              {surahs.map((s) => (
+                <option key={s.number} value={s.number}>
+                  {s.number}. {s.englishName} · {s.numberOfAyahs} ayat
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden md:block space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
             {surahs.map((s) => (
               <button
                 key={s.number}

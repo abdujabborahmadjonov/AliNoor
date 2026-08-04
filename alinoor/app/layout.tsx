@@ -9,6 +9,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#fafaf7",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Apply the persisted theme — or the OS preference if the user hasn't picked

@@ -75,9 +75,28 @@ export default function HadithPage() {
       title="Sahih al-Bukhari"
       subtitle={`all 97 books · ${total.toLocaleString()} hadith · tap a number to load it`}
     >
-      <div className="grid md:grid-cols-[280px_1fr] gap-8">
-        {/* BOOK LIST */}
-        <div className="space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="grid md:grid-cols-[280px_1fr] gap-6 md:gap-8">
+        {/* Mobile: book dropdown */}
+        <div className="md:hidden">
+          <label className="microlabel block mb-2">Book</label>
+          <select
+            value={bookNo}
+            onChange={(e) => {
+              setBookNo(Number(e.target.value))
+              setOpen(null)
+            }}
+            className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm focus:outline-none focus:border-linestrong"
+          >
+            {BUKHARI_BOOKS.map((b) => (
+              <option key={b.n} value={b.n}>
+                {b.n}. {b.title} · {b.last - b.first + 1}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* BOOK LIST (desktop) */}
+        <div className="hidden md:block space-y-0.5 max-h-[70vh] overflow-y-auto pr-1">
           {BUKHARI_BOOKS.map((b) => (
             <button
               key={b.n}
