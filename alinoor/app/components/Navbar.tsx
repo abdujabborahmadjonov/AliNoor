@@ -77,6 +77,12 @@ export default function Navbar() {
 
           {/* RIGHT — actions */}
           <div className="flex items-center gap-2 relative flex-shrink-0">
+            <Link
+              href="/today"
+              className="hidden sm:block px-4 py-2 rounded-lg border border-line text-ink2 text-sm font-medium hover:border-linestrong hover:text-ink transition-colors"
+            >
+              Today
+            </Link>
             <ThemeToggle />
 
             {!user && (

@@ -22,6 +22,9 @@ module.exports = {
         ember: 'rgb(var(--an-ember) / <alpha-value>)',
         good: 'rgb(var(--an-good) / <alpha-value>)',
         warn: 'rgb(var(--an-warn) / <alpha-value>)',
+        catsocial: 'rgb(var(--an-cat-social) / <alpha-value>)',
+        catedu: 'rgb(var(--an-cat-edu) / <alpha-value>)',
+        catfin: 'rgb(var(--an-cat-fin) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['"Space Grotesk"', 'system-ui', '-apple-system', 'sans-serif'],

@@ -21,6 +21,9 @@
   --an-ember: 179 74 58;
   --an-good: 74 106 72;
   --an-warn: 138 106 58;
+  --an-cat-social: 74 102 136;
+  --an-cat-edu: 106 74 122;
+  --an-cat-fin: 138 106 58;
 }
 
 [data-theme='dark'] {
@@ -38,6 +41,9 @@
   --an-ember: 217 117 96;
   --an-good: 127 160 120;
   --an-warn: 212 168 104;
+  --an-cat-social: 110 145 184;
+  --an-cat-edu: 152 116 176;
+  --an-cat-fin: 188 148 92;
 }
 
 html,
