@@ -71,7 +71,7 @@ export default function ArabicPage() {
                 >
                   ★
                 </button>
-                <p dir="rtl" lang="ar" className="text-3xl text-ink mb-3">
+                <p dir="rtl" lang="ar" className="font-quran text-4xl leading-relaxed text-ink mb-3">
                   {w.ar}
                 </p>
                 <p className="font-mono text-[12px] text-mute">{w.tr}</p>

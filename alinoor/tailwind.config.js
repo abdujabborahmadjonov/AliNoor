@@ -30,6 +30,8 @@ module.exports = {
         sans: ['"Space Grotesk"', 'system-ui', '-apple-system', 'sans-serif'],
         hand: ['Caveat', 'cursive'],
         mono: ['"JetBrains Mono"', 'ui-monospace', '"SF Mono"', 'monospace'],
+        quran: ['"Amiri Quran"', 'Amiri', 'serif'],
+        arabic: ['Amiri', '"Amiri Quran"', 'serif'],
       },
       boxShadow: {
         card: '0 1px 0 rgba(20,18,15,.03), 0 1px 2px rgba(20,18,15,.04)',
