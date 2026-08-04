@@ -137,9 +137,17 @@ export default function LoginPage() {
             </div>
 
             <div className="mb-6">
-              <label htmlFor="login-password" className="microlabel block mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="login-password" className="microlabel">
+                  Password
+                </label>
+                <Link
+                  href="/reset-password"
+                  className="font-mono text-[11px] text-mute hover:text-ink transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="login-password"
                 type="password"
