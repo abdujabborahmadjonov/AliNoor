@@ -1,13 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
@@ -46,7 +50,15 @@ const htmlToParagraphs = (html: string): string[] => {
     .filter(Boolean)
 }
 
-export default function EssaysScreen() {
+export default function EssaysScreen({
+  userId,
+  email,
+  name,
+}: {
+  userId: string | null
+  email: string
+  name: string
+}) {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -54,6 +66,53 @@ export default function EssaysScreen() {
   const [open, setOpen] = useState<Article | null>(null)
   const [openBody, setOpenBody] = useState<string[] | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [writing, setWriting] = useState(false)
+  const [wTitle, setWTitle] = useState('')
+  const [wContent, setWContent] = useState('')
+  const [publishing, setPublishing] = useState(false)
+
+  const publish = async (status: 'draft' | 'published') => {
+    if (!userId) return
+    if (!wTitle.trim() || !wContent.trim()) {
+      Alert.alert('AliNoor', 'Title and content are required.')
+      return
+    }
+    setPublishing(true)
+    const slug =
+      wTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') +
+      '-' +
+      Date.now().toString(36)
+    const words = wContent.trim().split(/\s+/).length
+    const { error } = await supabase.from('articles').insert({
+      title: wTitle.trim(),
+      slug,
+      excerpt: wContent.trim().slice(0, 180),
+      content: wContent.trim(),
+      topic: 'Essays',
+      status,
+      author_id: userId,
+      author_email: email,
+      author_name: name || null,
+      read_time_minutes: Math.max(1, Math.round(words / 200)),
+      published_at: status === 'published' ? new Date().toISOString() : null,
+    })
+    setPublishing(false)
+    if (error) {
+      Alert.alert('AliNoor', error.message)
+    } else {
+      setWriting(false)
+      setWTitle('')
+      setWContent('')
+      Alert.alert(
+        'AliNoor',
+        status === 'published' ? 'Essay published!' : 'Draft saved.',
+      )
+      if (status === 'published') refresh()
+    }
+  }
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -113,6 +172,11 @@ export default function EssaysScreen() {
 
   return (
     <>
+      {userId && (
+        <TouchableOpacity style={s.writeFab} onPress={() => setWriting(true)}>
+          <Text style={s.writeFabText}>✎ Write</Text>
+        </TouchableOpacity>
+      )}
       <FlatList
         style={s.wrap}
         data={articles}
@@ -190,6 +254,57 @@ export default function EssaysScreen() {
             <View style={{ height: 48 }} />
           </ScrollView>
         </View>
+      </Modal>
+
+      <Modal
+        visible={writing}
+        animationType="slide"
+        onRequestClose={() => setWriting(false)}>
+        <KeyboardAvoidingView
+          style={s.composeWrap}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.readerHead}>
+            <TouchableOpacity onPress={() => setWriting(false)}>
+              <Text style={s.back}>← Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={s.composeScroll}>
+            <Text style={s.composeMicro}>NEW ESSAY</Text>
+            <TextInput
+              style={s.composeTitle}
+              value={wTitle}
+              onChangeText={setWTitle}
+              placeholder="Title…"
+              placeholderTextColor={T.faint}
+            />
+            <TextInput
+              style={s.composeBody}
+              value={wContent}
+              onChangeText={setWContent}
+              placeholder="Write your essay…"
+              placeholderTextColor={T.faint}
+              multiline
+              textAlignVertical="top"
+            />
+            <View style={s.composeBtns}>
+              <TouchableOpacity
+                style={s.draftBtn}
+                disabled={publishing}
+                onPress={() => publish('draft')}>
+                <Text style={s.draftBtnText}>Save draft</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.publishBtn}
+                disabled={publishing}
+                onPress={() => publish('published')}>
+                <Text style={s.publishBtnText}>
+                  {publishing ? 'Publishing…' : 'Publish'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   )
@@ -269,4 +384,57 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   para: { fontSize: 16, lineHeight: 27, color: T.ink2, marginBottom: 16 },
+  writeFab: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    zIndex: 10,
+    backgroundColor: T.ink,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    elevation: 4,
+    shadowColor: '#14120f',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  writeFabText: { color: T.bg, fontWeight: '700', fontSize: 14 },
+  composeWrap: { flex: 1, backgroundColor: T.bg },
+  composeScroll: { paddingHorizontal: 20, paddingTop: 16 },
+  composeMicro: { fontSize: 10, letterSpacing: 1.6, color: T.mute },
+  composeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: T.ink,
+    marginTop: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: T.line,
+  },
+  composeBody: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: T.ink2,
+    minHeight: 300,
+    marginTop: 14,
+  },
+  composeBtns: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  draftBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  draftBtnText: { color: T.ink2, fontWeight: '600', fontSize: 14 },
+  publishBtn: {
+    flex: 1,
+    backgroundColor: T.ink,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  publishBtnText: { color: T.bg, fontWeight: '700', fontSize: 14 },
 })

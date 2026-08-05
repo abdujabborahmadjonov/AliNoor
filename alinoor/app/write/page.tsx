@@ -94,7 +94,7 @@ function WriteForm() {
       .replace(/^-|-$/g, '')
   }
 
-  const handleSubmit = async (status: 'draft' | 'pending') => {
+  const handleSubmit = async (status: 'draft' | 'published') => {
     if (!user) return
     if (!formData.title.trim() || !formData.content.trim()) {
       alert('Title and content are required')
@@ -105,6 +105,7 @@ function WriteForm() {
 
     try {
       const slug = generateSlug(formData.title)
+      const words = formData.content.trim().split(/\s+/).length
       const articleData = {
         title: formData.title,
         slug: slug,
@@ -113,7 +114,12 @@ function WriteForm() {
         topic: formData.topic,
         cover_image: formData.cover_image,
         status: status,
+        // RLS requires the row to belong to the signed-in user.
+        author_id: user.id,
         author_email: user.email,
+        author_name: user.user_metadata?.full_name || null,
+        read_time_minutes: Math.max(1, Math.round(words / 200)),
+        published_at: status === 'published' ? new Date().toISOString() : null,
       }
 
       if (isEditMode && articleId) {
@@ -125,7 +131,7 @@ function WriteForm() {
 
         if (error) throw error
 
-        alert(status === 'pending' ? 'Article submitted for review!' : 'Article updated!')
+        alert(status === 'published' ? 'Essay published!' : 'Article updated!')
         router.push('/my-articles')
       } else {
         // Create new article
@@ -135,7 +141,7 @@ function WriteForm() {
 
         if (error) throw error
 
-        alert(status === 'pending' ? 'Article submitted for review!' : 'Draft saved!')
+        alert(status === 'published' ? 'Essay published!' : 'Draft saved!')
         router.push('/my-articles')
       }
     } catch (error: any) {
@@ -240,7 +246,7 @@ function WriteForm() {
               </button>
 
               <button
-                onClick={() => handleSubmit('pending')}
+                onClick={() => handleSubmit('published')}
                 disabled={loading}
                 className="flex-1 bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50"
               >

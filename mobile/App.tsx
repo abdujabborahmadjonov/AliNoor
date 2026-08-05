@@ -112,7 +112,13 @@ export default function App() {
               {tab === 'today' && userId && <TodayScreen userId={userId} />}
               {tab === 'habits' && userId && <HabitsScreen userId={userId} />}
               {tab === 'quran' && <QuranScreen />}
-              {tab === 'essays' && <EssaysScreen />}
+              {tab === 'essays' && (
+                <EssaysScreen
+                  userId={userId}
+                  email={email}
+                  name={session?.user.user_metadata?.full_name || ''}
+                />
+              )}
               {tab === 'hadith' && <HadithScreen />}
               {tab === 'arabic' && <ArabicScreen userId={userId} />}
               {tab === 'settings' && userId && (

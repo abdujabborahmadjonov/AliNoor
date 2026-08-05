@@ -20,6 +20,15 @@ const SectionRule = ({ n, label }: { n: string; label: string }) => (
   </div>
 )
 
+// Sample tasks shown in the landing's live day card (a real day's plan).
+const DEMO_TASKS: Array<{ anchor: string; title: string; done: boolean }> = [
+  { anchor: 'Fajr', title: 'Lesson ENG 103', done: false },
+  { anchor: 'Fajr', title: 'Shopping', done: true },
+  { anchor: 'Fajr', title: 'work on projects', done: false },
+  { anchor: 'Dhuhr', title: 'Lunch', done: false },
+  { anchor: 'Dhuhr', title: 'Lock in 3 hours for Stat 151', done: false },
+]
+
 const AXES = [
   { key: 'spiritual', label: 'Spiritual', desc: 'Salah, Qur’an, dhikr.' },
   { key: 'physical', label: 'Physical', desc: 'Walk, rest, train, drink water.' },
@@ -214,21 +223,47 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-1.5">
                   {day.sequence.map((p) => (
-                    <div
-                      key={`${p.name}${p.time.getTime()}`}
-                      className={`flex items-center gap-4 border rounded-lg px-4 py-2.5 ${
-                        day.current.name === p.name
-                          ? 'border-ember/50'
-                          : 'border-line'
-                      }`}
-                    >
-                      <span className="w-4 h-4 rounded-full border border-linestrong" />
-                      <span className="font-medium text-ink text-sm w-20">
-                        {p.name}
-                      </span>
-                      <span className="font-mono text-[12px] text-ink3">
-                        {fmtTime(p.time, city.tz)}
-                      </span>
+                    <div key={`${p.name}${p.time.getTime()}`}>
+                      <div
+                        className={`flex items-center gap-4 border rounded-lg px-4 py-2.5 ${
+                          day.current.name === p.name
+                            ? 'border-ember/50'
+                            : 'border-line'
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full border border-linestrong" />
+                        <span className="font-medium text-ink text-sm w-20">
+                          {p.name}
+                        </span>
+                        <span className="font-mono text-[12px] text-ink3">
+                          {fmtTime(p.time, city.tz)}
+                        </span>
+                      </div>
+                      {DEMO_TASKS.filter((t) => t.anchor === p.name).map(
+                        (t) => (
+                          <div
+                            key={t.title}
+                            className="flex items-center gap-3 ml-5 mt-1.5 border border-line bg-panel2/60 rounded-lg px-3.5 py-2"
+                          >
+                            <span
+                              className={`w-3.5 h-3.5 rounded-full border flex-shrink-0 ${
+                                t.done
+                                  ? 'bg-good border-good'
+                                  : 'border-linestrong'
+                              }`}
+                            />
+                            <span
+                              className={`text-[13px] ${
+                                t.done
+                                  ? 'text-mute line-through'
+                                  : 'text-ink2'
+                              }`}
+                            >
+                              {t.title}
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
                   ))}
                 </div>
