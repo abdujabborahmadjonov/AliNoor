@@ -50,7 +50,7 @@ function ArticleReader() {
         .single()
 
       if (error || !data) {
-        router.push('/')
+        router.push('/essays')
         return
       }
 
@@ -108,7 +108,7 @@ function ArticleReader() {
     if (slug) {
       loadArticle()
     } else {
-      router.push('/')
+      router.push('/essays')
     }
   }, [slug, user, router])
 
@@ -254,7 +254,7 @@ function ArticleReader() {
           {/* Back link */}
           <div className="pt-6 border-t border-line">
             <Link
-              href="/"
+              href="/essays"
               className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
             >
               <span>←</span>

@@ -136,7 +136,7 @@ export default function BookmarksPage() {
                 save what deserves a second read
               </p>
               <Link
-                href="/"
+                href="/essays"
                 className="inline-block px-5 py-2.5 bg-ink text-bg rounded-lg text-sm font-medium hover:opacity-85 transition-opacity"
               >
                 Discover essays
@@ -207,7 +207,7 @@ export default function BookmarksPage() {
 
           <div className="mt-14 pt-6 border-t border-line">
             <Link
-              href="/"
+              href="/essays"
               className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
             >
               <span>←</span>

@@ -164,7 +164,7 @@ function SearchResults() {
 
           <div className="mt-14 pt-6 border-t border-line">
             <Link
-              href="/"
+              href="/essays"
               className="inline-flex items-center gap-1.5 text-sm text-mute hover:text-ink transition-colors"
             >
               <span>←</span>

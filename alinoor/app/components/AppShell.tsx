@@ -14,7 +14,7 @@ const NAV = [
   { href: '/quran/', label: 'Quran', group: 'read' },
   { href: '/hadith/', label: 'Hadith', group: 'read' },
   { href: '/arabic/', label: 'Arabic', group: 'read' },
-  { href: '/', label: 'Essays', group: 'write' },
+  { href: '/essays/', label: 'Essays', group: 'write' },
   { href: '/write/', label: 'Write', group: 'write' },
   { href: '/settings/', label: 'Settings', group: 'sys' },
 ]
@@ -24,7 +24,7 @@ const TABS = [
   { href: '/today/', label: 'Today' },
   { href: '/habits/', label: 'Habits' },
   { href: '/quran/', label: 'Quran' },
-  { href: '/', label: 'Essays' },
+  { href: '/essays/', label: 'Essays' },
 ]
 
 const MORE = [
