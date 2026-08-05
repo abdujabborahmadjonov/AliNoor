@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  Modal,
   StatusBar,
   StyleSheet,
   Text,
@@ -13,21 +14,50 @@ import { supabase } from './lib/supabase'
 import { T } from './lib/theme'
 import AuthScreen from './screens/AuthScreen'
 import TodayScreen from './screens/TodayScreen'
+import HabitsScreen from './screens/HabitsScreen'
+import QuranScreen from './screens/QuranScreen'
 import EssaysScreen from './screens/EssaysScreen'
+import HadithScreen from './screens/HadithScreen'
+import ArabicScreen from './screens/ArabicScreen'
 import SettingsScreen from './screens/SettingsScreen'
 
-type Tab = 'today' | 'essays' | 'settings'
+type Tab =
+  | 'today'
+  | 'habits'
+  | 'quran'
+  | 'essays'
+  | 'hadith'
+  | 'arabic'
+  | 'settings'
 
 const TABS: Array<{ key: Tab; label: string; icon: string }> = [
   { key: 'today', label: 'Today', icon: '◔' },
+  { key: 'habits', label: 'Habits', icon: '▤' },
+  { key: 'quran', label: 'Quran', icon: '☾' },
   { key: 'essays', label: 'Essays', icon: '✎' },
-  { key: 'settings', label: 'Settings', icon: '⚙' },
 ]
+
+const MORE: Array<{ key: Tab; label: string; sub: string }> = [
+  { key: 'hadith', label: 'Hadith', sub: 'Sahih al-Bukhari, complete' },
+  { key: 'arabic', label: 'Arabic', sub: 'starter Qur’anic vocabulary' },
+  { key: 'settings', label: 'Settings', sub: 'city, method, account' },
+]
+
+const TITLES: Record<Tab, string> = {
+  today: 'Today',
+  habits: 'Habits',
+  quran: 'Quran',
+  essays: 'Essays',
+  hadith: 'Hadith',
+  arabic: 'Arabic',
+  settings: 'Settings',
+}
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [booted, setBooted] = useState(false)
   const [tab, setTab] = useState<Tab>('today')
+  const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -61,48 +91,95 @@ export default function App() {
 
   const userId = session.user.id
   const email = session.user.email || ''
+  const moreActive = MORE.some(m => m.key === tab)
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={s.app} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
+        <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
 
-      {/* Header */}
-      <View style={s.header}>
-        <Text>
-          <Text style={s.brand}>alinoor</Text>
-          <Text style={s.hand}>  in the light</Text>
-        </Text>
-        <Text style={s.headerTitle}>
-          {TABS.find(t => t.key === tab)?.label}
-        </Text>
-      </View>
+        {/* Header */}
+        <View style={s.header}>
+          <Text>
+            <Text style={s.brand}>alinoor</Text>
+            <Text style={s.hand}>  in the light</Text>
+          </Text>
+          <Text style={s.headerTitle}>{TITLES[tab]}</Text>
+        </View>
 
-      {/* Active screen */}
-      <View style={s.body}>
-        {tab === 'today' && <TodayScreen userId={userId} />}
-        {tab === 'essays' && <EssaysScreen />}
-        {tab === 'settings' && (
-          <SettingsScreen userId={userId} email={email} />
-        )}
-      </View>
+        {/* Active screen */}
+        <View style={s.body}>
+          {tab === 'today' && <TodayScreen userId={userId} />}
+          {tab === 'habits' && <HabitsScreen userId={userId} />}
+          {tab === 'quran' && <QuranScreen />}
+          {tab === 'essays' && <EssaysScreen />}
+          {tab === 'hadith' && <HadithScreen />}
+          {tab === 'arabic' && <ArabicScreen userId={userId} />}
+          {tab === 'settings' && (
+            <SettingsScreen userId={userId} email={email} />
+          )}
+        </View>
 
-      {/* Bottom tabs */}
-      <View style={s.tabbar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            key={t.key}
-            style={s.tab}
-            onPress={() => setTab(t.key)}>
-            <Text style={[s.tabIcon, tab === t.key && s.tabActive]}>
-              {t.icon}
-            </Text>
-            <Text style={[s.tabLabel, tab === t.key && s.tabActive]}>
-              {t.label}
-            </Text>
+        {/* Bottom tabs — Today · Habits · Quran · Essays · More */}
+        <View style={s.tabbar}>
+          {TABS.map(t => {
+            const active = tab === t.key
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={s.tab}
+                onPress={() => {
+                  setTab(t.key)
+                  setMoreOpen(false)
+                }}>
+                <Text style={[s.tabIcon, active && s.tabActive]}>{t.icon}</Text>
+                <Text style={[s.tabLabel, active && s.tabActive]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
+          <TouchableOpacity style={s.tab} onPress={() => setMoreOpen(true)}>
+            <Text style={[s.tabIcon, moreActive && s.tabActive]}>⋯</Text>
+            <Text style={[s.tabLabel, moreActive && s.tabActive]}>More</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
+
+        {/* More sheet */}
+        <Modal
+          visible={moreOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMoreOpen(false)}>
+          <TouchableOpacity
+            style={s.sheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setMoreOpen(false)}>
+            <View style={s.sheet}>
+              {MORE.map(m => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={s.sheetRow}
+                  onPress={() => {
+                    setTab(m.key)
+                    setMoreOpen(false)
+                  }}>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        s.sheetLabel,
+                        tab === m.key && { color: T.ember },
+                      ]}>
+                      {m.label}
+                    </Text>
+                    <Text style={s.sheetSub}>{m.sub}</Text>
+                  </View>
+                  <Text style={s.sheetArrow}>→</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
   )
@@ -143,4 +220,25 @@ const s = StyleSheet.create({
   tabIcon: { fontSize: 21, color: T.faint },
   tabLabel: { fontSize: 10, color: T.mute, marginTop: 3, letterSpacing: 0.3 },
   tabActive: { color: T.ember, fontWeight: '600' },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,15,0.35)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: T.panel,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingVertical: 10,
+    paddingBottom: 90,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  sheetLabel: { fontSize: 16, fontWeight: '600', color: T.ink },
+  sheetSub: { fontSize: 12, color: T.mute, marginTop: 2 },
+  sheetArrow: { fontSize: 16, color: T.faint },
 })

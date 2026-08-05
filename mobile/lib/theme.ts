@@ -14,4 +14,7 @@ export const T = {
   good: '#4a6a48',
   warn: '#8a6a3a',
   night: '#6e91b8',
+  catSocial: '#4a6688',
+  catEdu: '#6a4a7a',
+  catFin: '#8a6a3a',
 }
