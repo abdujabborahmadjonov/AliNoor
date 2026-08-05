@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   StatusBar,
   StyleSheet,
@@ -13,6 +14,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { T } from './lib/theme'
 import AuthScreen from './screens/AuthScreen'
+import LandingScreen from './screens/LandingScreen'
 import TodayScreen from './screens/TodayScreen'
 import HabitsScreen from './screens/HabitsScreen'
 import QuranScreen from './screens/QuranScreen'
@@ -58,6 +60,7 @@ export default function App() {
   const [booted, setBooted] = useState(false)
   const [tab, setTab] = useState<Tab>('today')
   const [moreOpen, setMoreOpen] = useState(false)
+  const [landingSeen, setLandingSeen] = useState(false)
 
   useEffect(() => {
     // Never hang on boot: if session restore is slow (offline / expired
@@ -71,7 +74,31 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange(
       (_event, newSession) => setSession(newSession),
     )
-    return () => sub.subscription.unsubscribe()
+
+    // Google sign-in returns here as alinoor://auth?code=… (PKCE) or, as a
+    // fallback, with tokens in the URL fragment.
+    const handleUrl = async (url: string | null) => {
+      if (!url) return
+      const codeMatch = url.match(/[?&]code=([^&#]+)/)
+      if (codeMatch) {
+        await supabase.auth.exchangeCodeForSession(codeMatch[1])
+        return
+      }
+      if (!url.includes('#')) return
+      const params = new URLSearchParams(url.split('#')[1])
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({ access_token, refresh_token })
+      }
+    }
+    Linking.getInitialURL().then(handleUrl)
+    const linkSub = Linking.addEventListener('url', e => handleUrl(e.url))
+
+    return () => {
+      sub.subscription.unsubscribe()
+      linkSub.remove()
+    }
   }, [])
 
   if (!booted) {
@@ -79,6 +106,23 @@ export default function App() {
       <View style={s.boot}>
         <ActivityIndicator color={T.ink} size="large" />
       </View>
+    )
+  }
+
+  // Signed-out visitors meet the landing first, like the website.
+  if (!session && !landingSeen) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={s.app} edges={['top', 'left', 'right']}>
+          <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
+          <LandingScreen
+            onNavigate={next => {
+              setTab(next)
+              setLandingSeen(true)
+            }}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
     )
   }
 

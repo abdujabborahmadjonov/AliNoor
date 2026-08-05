@@ -13,5 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE survives the browser→app handoff much better than tokens in the
+    // URL fragment: the redirect carries only a ?code=, exchanged in-app.
+    flowType: 'pkce',
   },
 })

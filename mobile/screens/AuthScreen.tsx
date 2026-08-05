@@ -89,12 +89,19 @@ export default function AuthScreen() {
 
         <TouchableOpacity
           style={s.googleBtn}
-          onPress={() =>
-            Linking.openURL(
-              'https://cgtetucceocbldqthgiw.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
-                encodeURIComponent('alinoor://auth'),
-            )
-          }>
+          onPress={async () => {
+            // PKCE: let supabase-js create the verifier and authorize URL,
+            // then hand the URL to the browser ourselves.
+            const { data, error } = await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: {
+                redirectTo: 'alinoor://auth',
+                skipBrowserRedirect: true,
+              },
+            })
+            if (error) setMessage(error.message)
+            else if (data.url) Linking.openURL(data.url)
+          }}>
           <Text style={s.googleText}>Continue with Google</Text>
         </TouchableOpacity>
 
