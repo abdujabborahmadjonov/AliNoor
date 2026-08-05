@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -87,6 +88,17 @@ export default function AuthScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={s.googleBtn}
+          onPress={() =>
+            Linking.openURL(
+              'https://cgtetucceocbldqthgiw.supabase.co/auth/v1/authorize?provider=google&redirect_to=' +
+                encodeURIComponent('alinoor://auth'),
+            )
+          }>
+          <Text style={s.googleText}>Continue with Google</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => setMode(mode === 'in' ? 'up' : 'in')}
           style={s.switchBtn}>
           <Text style={s.switchText}>
@@ -141,6 +153,15 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   primaryText: { color: T.bg, fontWeight: '600', fontSize: 15 },
+  googleBtn: {
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  googleText: { color: T.ink2, fontSize: 14, fontWeight: '600' },
   switchBtn: { marginTop: 16, alignItems: 'center' },
   switchText: { color: T.ink3, fontSize: 13 },
   message: { marginTop: 14, textAlign: 'center', color: T.ink3, fontSize: 13 },
