@@ -87,6 +87,53 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Imported essays are stored as HTML — style the common tags. */
+.essay-html p {
+  margin-bottom: 1.1em;
+}
+
+.essay-html h3,
+.essay-html h4,
+.essay-html h5 {
+  color: rgb(var(--an-ink));
+  font-weight: 600;
+  margin: 1.6em 0 0.7em;
+  font-size: 1.1em;
+}
+
+.essay-html a {
+  color: rgb(var(--an-ember));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.essay-html em {
+  color: rgb(var(--an-ink3));
+}
+
+.essay-html blockquote {
+  border-left: 2px solid rgb(var(--an-lineStrong));
+  padding-left: 1em;
+  margin: 1.2em 0;
+  color: rgb(var(--an-ink3));
+}
+
+.essay-html ul,
+.essay-html ol {
+  margin: 0 0 1.1em 1.4em;
+  list-style: disc;
+}
+
+.essay-html ol {
+  list-style: decimal;
+}
+
+.essay-html hr {
+  border: none;
+  border-top: 1px solid rgb(var(--an-line));
+  margin: 2em 0 1.2em;
+}
+
 @keyframes animate-in {
   from {
     opacity: 0;

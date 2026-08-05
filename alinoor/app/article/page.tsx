@@ -14,6 +14,7 @@ type Article = {
   topic: string
   cover_image: string
   author_email: string
+  author_name?: string | null
   views: number
   likes: number
   created_at: string
@@ -55,17 +56,21 @@ function ArticleReader() {
 
       setArticle(data)
 
-      // Get author name from profiles
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('email', data.author_email)
-        .single()
-
-      if (profileData) {
-        setAuthorName(profileData.full_name)
+      // Prefer the explicit byline; fall back to the author's profile.
+      if (data.author_name) {
+        setAuthorName(data.author_name)
       } else {
-        setAuthorName(data.author_email.split('@')[0])
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('email', data.author_email)
+          .single()
+
+        if (profileData) {
+          setAuthorName(profileData.full_name)
+        } else {
+          setAuthorName(data.author_email.split('@')[0])
+        }
       }
 
       setLoading(false)
@@ -232,11 +237,18 @@ function ArticleReader() {
             </button>
           </div>
 
-          {/* Content */}
+          {/* Content — imported essays are HTML; user-written ones are text */}
           <div className="mb-16">
-            <div className="text-lg leading-[1.8] text-ink2 whitespace-pre-wrap">
-              {article.content}
-            </div>
+            {/^\s*</.test(article.content) ? (
+              <div
+                className="essay-html text-lg leading-[1.8] text-ink2"
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
+            ) : (
+              <div className="text-lg leading-[1.8] text-ink2 whitespace-pre-wrap">
+                {article.content}
+              </div>
+            )}
           </div>
 
           {/* Back link */}

@@ -56,6 +56,7 @@ export default function BookmarksPage() {
             excerpt,
             topic,
             author_email,
+            author_name,
             views,
             likes
           )
@@ -67,6 +68,10 @@ export default function BookmarksPage() {
         // Get author names
         const bookmarksWithAuthors = await Promise.all(
           bookmarksData.map(async (bookmark: any) => {
+            if (bookmark.articles?.author_name) {
+              return { ...bookmark, author_name: bookmark.articles.author_name }
+            }
+
             const { data: profile } = await supabase
               .from('profiles')
               .select('full_name')

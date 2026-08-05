@@ -13,6 +13,7 @@ type Article = {
   topic: string
   cover_image: string
   author_email: string
+  author_name?: string | null
   created_at: string
   views: number
   likes: number
@@ -55,6 +56,9 @@ export default function Home() {
       if (data) {
         const articlesWithAuthors = await Promise.all(
           data.map(async (article) => {
+            // Explicit byline wins; only look up a profile when absent.
+            if (article.author_name) return article
+
             const { data: profile } = await supabase
               .from('profiles')
               .select('full_name')

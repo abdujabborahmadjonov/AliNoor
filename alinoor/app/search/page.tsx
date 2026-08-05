@@ -39,16 +39,18 @@ function SearchResults() {
 
       const { data } = await supabase
         .from('articles')
-        .select('id, title, slug, excerpt, topic, author_email, created_at, views')
+        .select('id, title, slug, excerpt, topic, author_email, author_name, created_at, views')
         .eq('status', 'approved')
         .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
         .order('created_at', { ascending: false })
         .limit(20)
 
       if (data) {
-        // Get author names for all articles
+        // Explicit byline wins; only look up a profile when absent.
         const articlesWithAuthors = await Promise.all(
-          data.map(async (article) => {
+          data.map(async (article: any) => {
+            if (article.author_name) return article
+
             const { data: profile } = await supabase
               .from('profiles')
               .select('full_name')
