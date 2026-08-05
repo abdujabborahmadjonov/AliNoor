@@ -8,6 +8,7 @@ import { findCity } from '@/lib/cities'
 import { fmtTime, maghribDay, timesFor } from '@/lib/prayer'
 import { CATEGORY_DOT, loadSettings } from '@/lib/store'
 import type { AppSettings } from '@/lib/store'
+import { supabase } from '@/lib/supabase'
 
 const SectionRule = ({ n, label }: { n: string; label: string }) => (
   <div className="flex items-center gap-4 mb-14">
@@ -30,11 +31,19 @@ const AXES = [
 export default function LandingPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [now, setNow] = useState(new Date())
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     setSettings(loadSettings())
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUser(session?.user || null)
+    )
     const t = setInterval(() => setNow(new Date()), 30_000)
-    return () => clearInterval(t)
+    return () => {
+      clearInterval(t)
+      authListener.subscription.unsubscribe()
+    }
   }, [])
 
   const city = settings ? findCity(settings.city) : null
@@ -85,12 +94,30 @@ export default function LandingPage() {
               Habits
             </Link>
             <ThemeToggle />
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-lg bg-ink text-bg text-sm font-medium hover:opacity-85 transition-opacity"
-            >
-              Sign in →
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/settings"
+                  title={user.email}
+                  className="w-9 h-9 rounded-lg border border-linestrong bg-panel text-ink flex items-center justify-center font-semibold text-sm hover:bg-panel2 transition-colors"
+                >
+                  {(user.user_metadata?.full_name || user.email || 'A')[0].toUpperCase()}
+                </Link>
+                <Link
+                  href="/today"
+                  className="px-4 py-2 rounded-lg bg-ink text-bg text-sm font-medium hover:opacity-85 transition-opacity"
+                >
+                  Open app →
+                </Link>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg bg-ink text-bg text-sm font-medium hover:opacity-85 transition-opacity"
+              >
+                Sign in →
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -497,18 +524,37 @@ export default function LandingPage() {
             One account — essays, prayers, habits, everything synced.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/login"
-              className="px-8 py-3.5 bg-ink text-bg rounded-xl font-medium hover:opacity-85 transition-opacity"
-            >
-              Sign in →
-            </Link>
-            <Link
-              href="/signup"
-              className="px-8 py-3.5 border border-linestrong text-ink rounded-xl font-medium hover:bg-panel transition-colors"
-            >
-              Create account
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/today"
+                  className="px-8 py-3.5 bg-ink text-bg rounded-xl font-medium hover:opacity-85 transition-opacity"
+                >
+                  Open Today →
+                </Link>
+                <Link
+                  href="/essays"
+                  className="px-8 py-3.5 border border-linestrong text-ink rounded-xl font-medium hover:bg-panel transition-colors"
+                >
+                  Read the essays
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="px-8 py-3.5 bg-ink text-bg rounded-xl font-medium hover:opacity-85 transition-opacity"
+                >
+                  Sign in →
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-8 py-3.5 border border-linestrong text-ink rounded-xl font-medium hover:bg-panel transition-colors"
+                >
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
