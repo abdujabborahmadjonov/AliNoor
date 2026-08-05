@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
+import AuthGate from '@/app/components/AuthGate'
 import { Book, loadBooks, saveBooks, uid } from '@/lib/store'
 
-export default function LearningPage() {
+function PageInner() {
   const [books, setBooks] = useState<Book[]>([])
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
@@ -205,5 +206,13 @@ export default function LearningPage() {
         </div>
       )}
     </AppShell>
+  )
+}
+
+export default function GatedPage() {
+  return (
+    <AuthGate>
+      <PageInner />
+    </AuthGate>
   )
 }

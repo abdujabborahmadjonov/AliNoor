@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
+import AuthGate from '@/app/components/AuthGate'
 import { findCity } from '@/lib/cities'
 import {
   CATEGORIES,
@@ -20,7 +21,7 @@ import {
 
 const WINDOW = 30
 
-export default function StatsPage() {
+function PageInner() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<HabitLogs>({})
   const [tasks, setTasks] = useState<Task[]>([])
@@ -248,5 +249,13 @@ export default function StatsPage() {
         </p>
       </div>
     </AppShell>
+  )
+}
+
+export default function GatedPage() {
+  return (
+    <AuthGate>
+      <PageInner />
+    </AuthGate>
   )
 }

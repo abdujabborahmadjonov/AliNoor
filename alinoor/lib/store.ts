@@ -51,6 +51,54 @@ export type Book = {
   finishedAt?: string
 }
 
+import { supabase } from '@/lib/supabase'
+
+// localStorage is the fast cache; when a user is signed in every write is
+// mirrored to the user_data table so laptop and phone see the same data.
+const SYNC_KEYS = [
+  'alinoor_settings',
+  'alinoor_tasks',
+  'alinoor_habits',
+  'alinoor_habit_logs',
+  'alinoor_books',
+  'alinoor_arabic_stars',
+]
+
+let cloudUser: string | null = null
+
+export const setCloudUser = (id: string | null) => {
+  cloudUser = id
+}
+
+// Pull the user's data down; cloud wins, but local-only keys (data created
+// before the first login on this device) are pushed up instead of lost.
+export const cloudHydrate = async (userId: string) => {
+  cloudUser = userId
+  const { data } = await supabase
+    .from('user_data')
+    .select('key, value')
+    .eq('user_id', userId)
+
+  const cloudKeys = new Set((data || []).map((r) => r.key))
+  for (const row of data || []) {
+    try {
+      window.localStorage.setItem(row.key, JSON.stringify(row.value))
+    } catch {}
+  }
+  for (const key of SYNC_KEYS) {
+    if (!cloudKeys.has(key)) {
+      const raw = window.localStorage.getItem(key)
+      if (raw) {
+        try {
+          await supabase
+            .from('user_data')
+            .upsert({ user_id: userId, key, value: JSON.parse(raw) })
+        } catch {}
+      }
+    }
+  }
+}
+
 const read = <T,>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') return fallback
   try {
@@ -65,6 +113,20 @@ const write = (key: string, value: unknown) => {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch {}
+  if (cloudUser) {
+    supabase
+      .from('user_data')
+      .upsert({
+        user_id: cloudUser,
+        key,
+        value,
+        updated_at: new Date().toISOString(),
+      })
+      .then(
+        () => {},
+        () => {}
+      )
+  }
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -89,6 +151,11 @@ export const saveHabitLogs = (l: HabitLogs) => write('alinoor_habit_logs', l)
 
 export const loadBooks = () => read<Book[]>('alinoor_books', [])
 export const saveBooks = (b: Book[]) => write('alinoor_books', b)
+
+export const loadStars = () =>
+  read<Record<string, boolean>>('alinoor_arabic_stars', {})
+export const saveStars = (s: Record<string, boolean>) =>
+  write('alinoor_arabic_stars', s)
 
 export const uid = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`

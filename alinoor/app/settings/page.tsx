@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/app/components/AppShell'
+import AuthGate from '@/app/components/AuthGate'
 import { CITIES, findCity } from '@/lib/cities'
 import { supabase } from '@/lib/supabase'
 import {
@@ -20,7 +21,7 @@ const METHODS: Array<{ value: AppSettings['method']; label: string }> = [
   { value: 'Karachi', label: 'University of Karachi' },
 ]
 
-export default function SettingsPage() {
+function PageInner() {
   const router = useRouter()
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [user, setUser] = useState<any>(null)
@@ -154,9 +155,9 @@ export default function SettingsPage() {
         <section className="bg-panel border border-line rounded-xl p-6 shadow-card">
           <h2 className="font-semibold text-ink mb-2">Your data</h2>
           <p className="text-sm text-ink3 leading-relaxed">
-            Tasks, habits, books, and these preferences live in this
-            browser&apos;s local storage. Essays and your account live in
-            Supabase.
+            Tasks, habits, books, and these preferences are synced to your
+            account — sign in on any device and they follow you. Essays live in
+            Supabase too.
           </p>
         </section>
 
@@ -177,5 +178,13 @@ export default function SettingsPage() {
         </section>
       </div>
     </AppShell>
+  )
+}
+
+export default function GatedPage() {
+  return (
+    <AuthGate>
+      <PageInner />
+    </AuthGate>
   )
 }

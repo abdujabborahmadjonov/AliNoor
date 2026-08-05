@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
+import AuthGate from '@/app/components/AuthGate'
 import { findCity } from '@/lib/cities'
 import {
   CATEGORIES,
@@ -22,7 +23,7 @@ import {
 
 const GRID_DAYS = 60
 
-export default function HabitsPage() {
+function PageInner() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<HabitLogs>({})
   const [today, setToday] = useState('')
@@ -206,5 +207,13 @@ export default function HabitsPage() {
         })}
       </div>
     </AppShell>
+  )
+}
+
+export default function GatedPage() {
+  return (
+    <AuthGate>
+      <PageInner />
+    </AuthGate>
   )
 }

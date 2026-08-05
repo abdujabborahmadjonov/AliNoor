@@ -3,16 +3,14 @@
 import { useEffect, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import { ARABIC_GROUPS } from '@/lib/content'
+import { loadStars, saveStars } from '@/lib/store'
 
 export default function ArabicPage() {
   const [groupKey, setGroupKey] = useState(ARABIC_GROUPS[0].key)
   const [starred, setStarred] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem('alinoor_arabic_stars')
-      if (raw) setStarred(JSON.parse(raw))
-    } catch {}
+    setStarred(loadStars())
   }, [])
 
   const group = ARABIC_GROUPS.find((g) => g.key === groupKey)!
@@ -21,9 +19,7 @@ export default function ArabicPage() {
     const next = { ...starred, [ar]: !starred[ar] }
     if (!next[ar]) delete next[ar]
     setStarred(next)
-    try {
-      window.localStorage.setItem('alinoor_arabic_stars', JSON.stringify(next))
-    } catch {}
+    saveStars(next)
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
+import AuthGate from '@/app/components/AuthGate'
 import { findCity } from '@/lib/cities'
 import { countdown, fmtTime, maghribDay } from '@/lib/prayer'
 import {
@@ -14,7 +15,7 @@ import {
   uid,
 } from '@/lib/store'
 
-export default function TodayPage() {
+function PageInner() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [now, setNow] = useState(new Date())
@@ -206,5 +207,13 @@ export default function TodayPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+export default function GatedPage() {
+  return (
+    <AuthGate>
+      <PageInner />
+    </AuthGate>
   )
 }
