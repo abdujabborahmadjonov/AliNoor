@@ -10,7 +10,7 @@ type Article = {
   id: string
   title: string
   slug: string
-  status: 'draft' | 'pending' | 'approved'
+  status: 'draft' | 'pending' | 'published'
   created_at: string
 }
 
@@ -54,7 +54,7 @@ export default function MyArticlesPage() {
 
   const statusClasses = (status: string) => {
     switch (status) {
-      case 'approved': return 'border-good/40 bg-good/10 text-good'
+      case 'published': return 'border-good/40 bg-good/10 text-good'
       case 'pending': return 'border-warn/40 bg-warn/10 text-warn'
       default: return 'border-line bg-panel2 text-mute'
     }
@@ -128,7 +128,7 @@ export default function MyArticlesPage() {
                   </div>
 
                   <div className="flex gap-2 flex-shrink-0">
-                    {article.status === 'approved' && (
+                    {article.status === 'published' && (
                       <Link
                         href={`/article?slug=${article.slug}`}
                         className="px-3.5 py-1.5 rounded-lg border border-line text-xs font-medium text-ink2 hover:border-linestrong hover:text-ink transition-colors"

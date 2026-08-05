@@ -50,7 +50,7 @@ export default function Home() {
       const { data } = await supabase
         .from('articles')
         .select('*')
-        .eq('status', 'approved')
+        .eq('status', 'published')
         .order('created_at', { ascending: false })
 
       if (data) {

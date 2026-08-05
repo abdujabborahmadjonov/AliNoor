@@ -15,8 +15,8 @@ type Article = {
   cover_image: string
   author_email: string
   author_name?: string | null
-  views: number
-  likes: number
+  views_count?: number
+  likes_count?: number
   created_at: string
 }
 
@@ -46,7 +46,7 @@ function ArticleReader() {
         .from('articles')
         .select('*')
         .eq('slug', slug)
-        .eq('status', 'approved')
+        .eq('status', 'published')
         .single()
 
       if (error || !data) {
@@ -125,7 +125,7 @@ function ArticleReader() {
     setLiked(!liked)
     setArticle({
       ...article,
-      likes: liked ? article.likes - 1 : article.likes + 1
+      likes_count: liked ? (article.likes_count || 1) - 1 : (article.likes_count || 0) + 1
     })
   }
 
@@ -207,8 +207,8 @@ function ArticleReader() {
             </div>
 
             <div className="flex items-center gap-4 font-mono text-[11px] text-mute">
-              <span>{article.views || 0} views</span>
-              <span>{article.likes || 0} likes</span>
+              <span>{article.views_count || 0} views</span>
+              <span>{article.likes_count || 0} likes</span>
             </div>
           </div>
 

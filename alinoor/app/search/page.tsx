@@ -14,7 +14,7 @@ type Article = {
   topic: string
   author_email: string
   created_at: string
-  views: number
+  views_count?: number
 }
 
 type ArticleWithAuthor = Article & {
@@ -39,8 +39,8 @@ function SearchResults() {
 
       const { data } = await supabase
         .from('articles')
-        .select('id, title, slug, excerpt, topic, author_email, author_name, created_at, views')
-        .eq('status', 'approved')
+        .select('id, title, slug, excerpt, topic, author_email, author_name, created_at, views_count')
+        .eq('status', 'published')
         .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -142,7 +142,7 @@ function SearchResults() {
                     <div className="flex items-center gap-3 font-mono text-[11px] text-mute">
                       <span>{article.author_name}</span>
                       <span className="text-faint">·</span>
-                      <span>{article.views || 0} views</span>
+                      <span>{article.views_count || 0} views</span>
                       <span className="text-faint">·</span>
                       <span>
                         {new Date(article.created_at).toLocaleDateString('en-US', {

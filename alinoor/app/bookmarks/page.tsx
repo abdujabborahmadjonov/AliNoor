@@ -17,8 +17,8 @@ type Bookmark = {
     excerpt: string
     topic: string
     author_email: string
-    views: number
-    likes: number
+    views_count?: number
+    likes_count?: number
   }
 }
 
@@ -57,8 +57,8 @@ export default function BookmarksPage() {
             topic,
             author_email,
             author_name,
-            views,
-            likes
+            views_count,
+            likes_count
           )
         `)
         .eq('user_id', data.user.id)
@@ -174,9 +174,9 @@ export default function BookmarksPage() {
                       <div className="flex items-center gap-3 font-mono text-[11px] text-mute">
                         <span>{bookmark.author_name}</span>
                         <span className="text-faint">·</span>
-                        <span>{article.views || 0} views</span>
+                        <span>{article.views_count || 0} views</span>
                         <span className="text-faint">·</span>
-                        <span>{article.likes || 0} likes</span>
+                        <span>{article.likes_count || 0} likes</span>
                       </div>
                     </div>
 

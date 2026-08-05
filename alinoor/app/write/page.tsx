@@ -38,7 +38,7 @@ function WriteForm() {
     content: '',
     topic: 'Technology',
     cover_image: '',
-    status: 'draft' as 'draft' | 'pending' | 'approved'
+    status: 'draft' as 'draft' | 'pending' | 'published'
   })
 
   useEffect(() => {
