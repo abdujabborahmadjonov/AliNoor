@@ -29,7 +29,7 @@ const methodParams = (method: AppSettings['method']) => {
   }
 }
 
-const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
+export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
   const city = findCity(settings.city)
   const params = methodParams(settings.method)
   params.madhab = settings.madhab === 'Hanafi' ? Madhab.Hanafi : Madhab.Shafi
@@ -82,6 +82,18 @@ export const fmtTime = (d: Date, tz: string) =>
     minute: '2-digit',
     hour12: false,
   }).format(d)
+
+// Minutes past local midnight in the given IANA timezone (for ring angles).
+export const minutesInTz = (d: Date, tz: string) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d)
+  const [h, m] = parts.split(':').map(Number)
+  return h * 60 + m
+}
 
 export const countdown = (to: Date, now: Date = new Date()) => {
   const ms = Math.max(0, to.getTime() - now.getTime())
