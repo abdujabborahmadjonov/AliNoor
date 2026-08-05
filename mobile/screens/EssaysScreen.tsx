@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   Image,
   Modal,
   ScrollView,
@@ -18,6 +19,7 @@ type Article = {
   title: string
   slug: string
   excerpt: string
+  topic?: string | null
   cover_image: string
   author_name?: string | null
   content?: string
@@ -51,12 +53,21 @@ export default function EssaysScreen() {
   const [end, setEnd] = useState(false)
   const [open, setOpen] = useState<Article | null>(null)
   const [openBody, setOpenBody] = useState<string[] | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    const rows = await fetchPage(0)
+    setArticles(rows)
+    setEnd(rows.length < PAGE)
+    setRefreshing(false)
+  }, [])
 
   const fetchPage = async (offset: number) => {
     const { data } = await supabase
       .from('articles')
       .select(
-        'id, title, slug, excerpt, cover_image, author_name, read_time_minutes',
+        'id, title, slug, excerpt, topic, cover_image, author_name, read_time_minutes',
       )
       .eq('status', 'published')
       .order('created_at', { ascending: false })
@@ -108,6 +119,9 @@ export default function EssaysScreen() {
         keyExtractor={a => a.id}
         onEndReached={more}
         onEndReachedThreshold={0.4}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+        }
         ListFooterComponent={
           loadingMore ? (
             <ActivityIndicator color={T.ink} style={{ marginVertical: 20 }} />
@@ -121,18 +135,28 @@ export default function EssaysScreen() {
               <Image source={{ uri: item.cover_image }} style={s.cover} />
             )}
             <View style={s.cardBody}>
+              {!!item.topic && (
+                <Text style={s.topic}>{item.topic.toUpperCase()}</Text>
+              )}
               <Text style={s.title}>{item.title.trim()}</Text>
               {!!item.excerpt && (
                 <Text style={s.excerpt} numberOfLines={3}>
                   {item.excerpt}
                 </Text>
               )}
-              <Text style={s.meta}>
-                {item.author_name || 'AliNoor'}
-                {item.read_time_minutes
-                  ? ` · ${item.read_time_minutes} min`
-                  : ''}
-              </Text>
+              <View style={s.metaRow}>
+                <View style={s.avatar}>
+                  <Text style={s.avatarText}>
+                    {(item.author_name || 'A')[0].toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={s.meta}>{item.author_name || 'AliNoor'}</Text>
+                {!!item.read_time_minutes && (
+                  <Text style={s.metaRight}>
+                    {item.read_time_minutes} min
+                  </Text>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         )}
@@ -189,9 +213,36 @@ const s = StyleSheet.create({
   },
   cover: { width: '100%', height: 160, backgroundColor: T.panel2 },
   cardBody: { padding: 16 },
+  topic: {
+    fontSize: 9,
+    letterSpacing: 1.6,
+    color: T.mute,
+    marginBottom: 6,
+  },
   title: { fontSize: 17, fontWeight: '600', color: T.ink, lineHeight: 23 },
   excerpt: { fontSize: 13, color: T.ink3, lineHeight: 19, marginTop: 6 },
-  meta: { fontSize: 11, color: T.mute, marginTop: 10 },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: T.line,
+  },
+  avatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: T.lineStrong,
+    backgroundColor: T.panel2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  avatarText: { fontSize: 10, fontWeight: '700', color: T.ink2 },
+  meta: { fontSize: 12, color: T.ink3, flex: 1 },
+  metaRight: { fontSize: 11, color: T.faint },
   readerWrap: { flex: 1, backgroundColor: T.bg },
   readerHead: {
     paddingTop: 54,

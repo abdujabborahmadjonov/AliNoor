@@ -49,12 +49,12 @@ export default function SettingsScreen({
   return (
     <ScrollView style={s.wrap}>
       <View style={s.card}>
-        <Text style={s.heading}>Account</Text>
+        <Text style={s.heading}>ACCOUNT</Text>
         <Text style={s.mono}>{email}</Text>
       </View>
 
       <View style={s.card}>
-        <Text style={s.heading}>City</Text>
+        <Text style={s.heading}>CITY</Text>
         <TouchableOpacity style={s.select} onPress={() => setPickCity(!pickCity)}>
           <Text style={s.selectText}>{settings.city}</Text>
           <Text style={s.chev}>{pickCity ? '▴' : '▾'}</Text>
@@ -83,7 +83,7 @@ export default function SettingsScreen({
       </View>
 
       <View style={s.card}>
-        <Text style={s.heading}>Calculation method</Text>
+        <Text style={s.heading}>CALCULATION METHOD</Text>
         {METHODS.map(([value, label]) => (
           <TouchableOpacity
             key={value}
@@ -102,7 +102,7 @@ export default function SettingsScreen({
       </View>
 
       <View style={s.card}>
-        <Text style={s.heading}>Madhhab</Text>
+        <Text style={s.heading}>MADHHAB</Text>
         <View style={s.rowGap}>
           {(['Hanafi', 'Shafi'] as const).map(m => (
             <TouchableOpacity
@@ -127,6 +127,7 @@ export default function SettingsScreen({
         onPress={() => supabase.auth.signOut()}>
         <Text style={s.signOutText}>Log out</Text>
       </TouchableOpacity>
+      <Text style={s.footer}>nūr — light, the kind you read by</Text>
       <View style={{ height: 40 }} />
     </ScrollView>
   )
@@ -142,7 +143,12 @@ const s = StyleSheet.create({
     padding: 18,
     marginTop: 14,
   },
-  heading: { fontSize: 15, fontWeight: '600', color: T.ink, marginBottom: 10 },
+  heading: {
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: T.mute,
+    marginBottom: 12,
+  },
   mono: { fontSize: 13, color: T.ink3 },
   select: {
     flexDirection: 'row',
@@ -180,4 +186,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   signOutText: { color: T.ember, fontWeight: '600', fontSize: 15 },
+  footer: {
+    textAlign: 'center',
+    color: T.mute,
+    fontStyle: 'italic',
+    fontSize: 14,
+    marginTop: 22,
+  },
 })

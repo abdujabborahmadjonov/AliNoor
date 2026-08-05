@@ -76,6 +76,34 @@ export default function TodayScreen({ userId }: { userId: string }) {
           }}
         />
       }>
+      {/* Date strip */}
+      <Text style={s.dateRow}>
+        {new Intl.DateTimeFormat('en-GB', {
+          timeZone: city.tz,
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })
+          .format(now)
+          .toUpperCase()}
+        {(() => {
+          try {
+            return (
+              ' · ' +
+              new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+                timeZone: city.tz,
+                day: 'numeric',
+                month: 'long',
+              })
+                .format(now)
+                .toUpperCase()
+            )
+          } catch {
+            return ''
+          }
+        })()}
+      </Text>
+
       {/* Next prayer card */}
       <View style={s.nextCard}>
         <View style={s.nextHead}>
@@ -167,6 +195,13 @@ export default function TodayScreen({ userId }: { userId: string }) {
 
 const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: T.bg, paddingHorizontal: 16 },
+  dateRow: {
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: T.mute,
+    marginTop: 16,
+    marginBottom: -4,
+  },
   nextCard: {
     backgroundColor: T.panel,
     borderWidth: 1,
