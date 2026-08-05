@@ -49,15 +49,14 @@ export default function LoginPage() {
   const checkProfileCompletion = async (userId: string) => {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, country, phone, age')
       .eq('id', userId)
       .single()
 
-    if (!profile || !profile.full_name) {
-      router.push('/complete-profile')
-    } else {
-      router.push('/')
-    }
+    const complete =
+      profile && profile.full_name && profile.country && profile.phone && profile.age
+
+    router.push(complete ? '/' : '/complete-profile')
   }
 
   const signInWithEmail = async (e: React.FormEvent) => {

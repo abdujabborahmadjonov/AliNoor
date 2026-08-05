@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import AuthGate from '@/app/components/AuthGate'
+import PrayerRing from '@/app/components/PrayerRing'
 import { City, findCity } from '@/lib/cities'
 import {
   TimedPrayer,
@@ -22,129 +23,17 @@ import {
   uid,
 } from '@/lib/store'
 
-const SHORT: Record<string, string> = {
-  Fajr: 'Fajr',
-  Sunrise: 'Sunr',
-  Dhuhr: 'Dhuh',
-  Asr: 'Asr',
-  Maghrib: 'Magh',
-  Isha: 'Isha',
-}
-
-// 24-hour dial: each prayer sits at its time-of-day angle, the night span
-// (Maghrib → Fajr) is drawn as a darker arc, and the sun marker shows now.
-function PrayerRing({
-  times,
-  city,
-  now,
-  next,
+// Month calendar (Monday-first): today filled, selected ringed, any day
+// tappable to plan that day.
+function MonthCalendar({
+  tz,
+  selected,
+  onSelect,
 }: {
-  times: TimedPrayer[]
-  city: City
-  now: Date
-  next: TimedPrayer
+  tz: string
+  selected: string
+  onSelect: (ymd: string) => void
 }) {
-  const C = 120
-  const R = 88
-
-  const pos = (mins: number, r: number): [number, number] => {
-    const a = (mins / 1440) * 2 * Math.PI - Math.PI / 2
-    return [C + Math.cos(a) * r, C + Math.sin(a) * r]
-  }
-
-  const minsOf = (p: TimedPrayer) => minutesInTz(p.time, city.tz)
-  const nowMin = minutesInTz(now, city.tz)
-  const maghrib = times.find((t) => t.name === 'Maghrib')!
-  const fajr = times.find((t) => t.name === 'Fajr')!
-
-  const arcPath = (fromMin: number, toMin: number) => {
-    const [x1, y1] = pos(fromMin, R)
-    const [x2, y2] = pos(toMin, R)
-    const delta = ((toMin - fromMin + 1440) % 1440) / 4 // degrees
-    const large = delta > 180 ? 1 : 0
-    return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`
-  }
-
-  const [sx, sy] = pos(nowMin, R)
-
-  return (
-    <div className="relative">
-      <svg viewBox="0 0 240 240" className="w-full">
-        <circle
-          cx={C}
-          cy={C}
-          r={R}
-          fill="none"
-          stroke="rgb(var(--an-line))"
-          strokeWidth="5"
-        />
-        {/* night span */}
-        <path
-          d={arcPath(minsOf(maghrib), minsOf(fajr))}
-          fill="none"
-          stroke="rgb(var(--an-cat-social))"
-          strokeOpacity="0.85"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-        {/* prayer markers + labels */}
-        {times.map((p) => {
-          const m = minsOf(p)
-          const [x, y] = pos(m, R)
-          const [lx, ly] = pos(m, R + 20)
-          return (
-            <g key={p.name}>
-              <circle
-                cx={x}
-                cy={y}
-                r="4"
-                fill="rgb(var(--an-panel))"
-                stroke={
-                  p.name === next.name
-                    ? 'rgb(var(--an-ember))'
-                    : 'rgb(var(--an-lineStrong))'
-                }
-                strokeWidth="2"
-              />
-              <text
-                x={lx}
-                y={ly}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize="9"
-                fontFamily="JetBrains Mono, monospace"
-                fill={
-                  p.name === next.name
-                    ? 'rgb(var(--an-ember))'
-                    : 'rgb(var(--an-mute))'
-                }
-              >
-                {SHORT[p.name]}
-              </text>
-            </g>
-          )
-        })}
-        {/* sun = now */}
-        <circle cx={sx} cy={sy} r="10" fill="rgb(var(--an-warn))" opacity="0.25" />
-        <circle cx={sx} cy={sy} r="5.5" fill="rgb(var(--an-warn))" />
-      </svg>
-
-      {/* center readout */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-        <p className="microlabel">next · {next.name}</p>
-        <p className="text-3xl font-semibold text-ink tracking-tight mt-1">
-          {countdown(next.time, now)}
-        </p>
-        <p className="font-mono text-[11px] text-mute mt-1">
-          at {fmtTime(next.time, city.tz)}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// Simple month calendar (Monday-first) with today highlighted.
-function MonthCalendar({ tz }: { tz: string }) {
   const [offset, setOffset] = useState(0)
   const todayYmd = dateInTz(tz)
   const [ty, tm] = todayYmd.split('-').map(Number)
@@ -194,18 +83,21 @@ function MonthCalendar({ tz }: { tz: string }) {
           </span>
         ))}
         {cells.map((c) => (
-          <span
+          <button
             key={c.ymd}
-            className={`font-mono text-[12px] py-1 mx-auto w-7 h-7 flex items-center justify-center rounded-full ${
+            onClick={() => onSelect(c.ymd)}
+            className={`font-mono text-[12px] py-1 mx-auto w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
               c.ymd === todayYmd
                 ? 'bg-ink text-bg font-semibold'
-                : c.inMonth
-                  ? 'text-ink2'
-                  : 'text-faint'
+                : c.ymd === selected
+                  ? 'ring-1 ring-ember text-ink font-semibold'
+                  : c.inMonth
+                    ? 'text-ink2 hover:bg-panel2'
+                    : 'text-faint hover:bg-panel2'
             }`}
           >
             {c.day}
-          </span>
+          </button>
         ))}
       </div>
     </div>
@@ -218,6 +110,7 @@ function PageInner() {
   const [now, setNow] = useState(new Date())
   const [addingAfter, setAddingAfter] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [selectedYmd, setSelectedYmd] = useState('')
 
   useEffect(() => {
     setSettings(loadSettings())
@@ -226,10 +119,18 @@ function PageInner() {
     return () => clearInterval(t)
   }, [])
 
-  const day = useMemo(
-    () => (settings ? maghribDay(settings, now) : null),
-    [settings, now]
-  )
+  const todayYmd = settings ? dateInTz(findCity(settings.city).tz, now) : ''
+  const viewYmd = selectedYmd || todayYmd
+  const isToday = viewYmd === todayYmd
+
+  // Prayer times for the viewed day: local noon of that date anchors the
+  // Maghrib-to-Maghrib window when browsing other days.
+  const day = useMemo(() => {
+    if (!settings) return null
+    if (isToday || !viewYmd) return maghribDay(settings, now)
+    const [y, m, d] = viewYmd.split('-').map(Number)
+    return maghribDay(settings, new Date(y, m - 1, d, 12, 0, 0))
+  }, [settings, now, viewYmd, isToday])
 
   if (!settings || !day) {
     return (
@@ -240,8 +141,7 @@ function PageInner() {
   }
 
   const city = findCity(settings.city)
-  const today = dateInTz(city.tz, now)
-  const dayTasks = tasks.filter((t) => t.date === today)
+  const dayTasks = tasks.filter((t) => t.date === viewYmd)
 
   const persist = (next: Task[]) => {
     setTasks(next)
@@ -252,27 +152,44 @@ function PageInner() {
     if (!draft.trim()) return
     persist([
       ...tasks,
-      { id: uid(), date: today, anchor, title: draft.trim(), done: false },
+      { id: uid(), date: viewYmd, anchor, title: draft.trim(), done: false },
     ])
     setDraft('')
     setAddingAfter(null)
   }
 
+  const [vy, vm, vd] = viewYmd.split('-').map(Number)
   const dateLabel = new Intl.DateTimeFormat('en-GB', {
-    timeZone: city.tz,
+    timeZone: 'UTC',
     weekday: 'short',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(now)
+  }).format(new Date(Date.UTC(vy, vm - 1, vd)))
 
   return (
-    <AppShell title="Today" subtitle={`${dateLabel} · ${city.name}`}>
+    <AppShell
+      title={isToday ? 'Today' : 'Planning'}
+      subtitle={`${dateLabel} · ${city.name}`}
+    >
+      {!isToday && (
+        <div className="mb-6 flex items-center gap-3">
+          <p className="font-hand text-2xl text-mute">
+            planning another day
+          </p>
+          <button
+            onClick={() => setSelectedYmd('')}
+            className="px-3 py-1.5 rounded-lg border border-line font-mono text-[11px] text-ink3 hover:text-ink hover:border-linestrong transition-colors"
+          >
+            back to today
+          </button>
+        </div>
+      )}
       <div className="grid lg:grid-cols-[1fr_280px] gap-8">
         {/* TIMELINE */}
         <div className="space-y-1">
           {day.sequence.map((p) => {
-            const isNow = day.current.name === p.name
+            const isNow = isToday && day.current.name === p.name
             const anchorTasks = dayTasks.filter((t) => t.anchor === p.name)
             return (
               <div key={`${p.name}${p.time.getTime()}`}>
@@ -393,7 +310,14 @@ function PageInner() {
           </div>
 
           <div className="bg-panel border border-line rounded-xl p-5 shadow-card">
-            <MonthCalendar tz={city.tz} />
+            <MonthCalendar
+              tz={city.tz}
+              selected={viewYmd}
+              onSelect={(ymd) => setSelectedYmd(ymd === todayYmd ? '' : ymd)}
+            />
+            <p className="font-mono text-[10px] text-faint mt-3">
+              tap a date to see its prayer times &amp; plan tasks
+            </p>
           </div>
 
           <div className="bg-panel border border-line rounded-xl p-6 shadow-card">

@@ -20,11 +20,14 @@ export default function AuthCallback() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, country, phone, age')
         .eq('id', userId)
         .single()
 
-      router.replace(!profile || !profile.full_name ? '/complete-profile' : '/')
+      const complete =
+        profile && profile.full_name && profile.country && profile.phone && profile.age
+
+      router.replace(complete ? '/' : '/complete-profile')
     }
 
     const run = async () => {
