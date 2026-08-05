@@ -10,11 +10,12 @@ import { ARABIC_GROUPS } from '../lib/content'
 import { loadKey, saveKey } from '../lib/store'
 import { T } from '../lib/theme'
 
-export default function ArabicScreen({ userId }: { userId: string }) {
+export default function ArabicScreen({ userId }: { userId: string | null }) {
   const [groupKey, setGroupKey] = useState(ARABIC_GROUPS[0].key)
   const [starred, setStarred] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
+    if (!userId) return
     loadKey<Record<string, boolean>>(userId, 'alinoor_arabic_stars', {}).then(
       setStarred,
     )
@@ -26,7 +27,7 @@ export default function ArabicScreen({ userId }: { userId: string }) {
     const next = { ...starred, [ar]: !starred[ar] }
     if (!next[ar]) delete next[ar]
     setStarred(next)
-    saveKey(userId, 'alinoor_arabic_stars', next)
+    if (userId) saveKey(userId, 'alinoor_arabic_stars', next)
   }
 
   return (

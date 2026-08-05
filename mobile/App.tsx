@@ -60,7 +60,11 @@ export default function App() {
   const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
+    // Never hang on boot: if session restore is slow (offline / expired
+    // token refresh), start signed-out and let onAuthStateChange catch up.
+    const fallback = setTimeout(() => setBooted(true), 4000)
     supabase.auth.getSession().then(({ data }) => {
+      clearTimeout(fallback)
       setSession(data.session)
       setBooted(true)
     })
@@ -78,20 +82,12 @@ export default function App() {
     )
   }
 
-  if (!session) {
-    return (
-      <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }} edges={['top']}>
-          <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
-          <AuthScreen />
-        </SafeAreaView>
-      </SafeAreaProvider>
-    )
-  }
-
-  const userId = session.user.id
-  const email = session.user.email || ''
+  const userId = session?.user.id || null
+  const email = session?.user.email || ''
   const moreActive = MORE.some(m => m.key === tab)
+  // Reading tabs are public, like the website; personal tabs need sign-in.
+  const GATED: Tab[] = ['today', 'habits', 'settings']
+  const needsAuth = !session && GATED.includes(tab)
 
   return (
     <SafeAreaProvider>
@@ -109,14 +105,20 @@ export default function App() {
 
         {/* Active screen */}
         <View style={s.body}>
-          {tab === 'today' && <TodayScreen userId={userId} />}
-          {tab === 'habits' && <HabitsScreen userId={userId} />}
-          {tab === 'quran' && <QuranScreen />}
-          {tab === 'essays' && <EssaysScreen />}
-          {tab === 'hadith' && <HadithScreen />}
-          {tab === 'arabic' && <ArabicScreen userId={userId} />}
-          {tab === 'settings' && (
-            <SettingsScreen userId={userId} email={email} />
+          {needsAuth ? (
+            <AuthScreen />
+          ) : (
+            <>
+              {tab === 'today' && userId && <TodayScreen userId={userId} />}
+              {tab === 'habits' && userId && <HabitsScreen userId={userId} />}
+              {tab === 'quran' && <QuranScreen />}
+              {tab === 'essays' && <EssaysScreen />}
+              {tab === 'hadith' && <HadithScreen />}
+              {tab === 'arabic' && <ArabicScreen userId={userId} />}
+              {tab === 'settings' && userId && (
+                <SettingsScreen userId={userId} email={email} />
+              )}
+            </>
           )}
         </View>
 
