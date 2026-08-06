@@ -70,6 +70,7 @@ export default function EssaysScreen({
   const [writing, setWriting] = useState(false)
   const [wTitle, setWTitle] = useState('')
   const [wContent, setWContent] = useState('')
+  const [wCover, setWCover] = useState('')
   const [publishing, setPublishing] = useState(false)
   const bodyReq = useRef(0)
 
@@ -80,13 +81,18 @@ export default function EssaysScreen({
       return
     }
     setPublishing(true)
-    const slug =
-      wTitle
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') +
-      '-' +
-      Date.now().toString(36)
+    // Keeps unicode letters, like the web's generateSlug — stripping to
+    // [a-z0-9] left Uzbek Cyrillic titles with nothing but the suffix.
+    const base = wTitle
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      // Deliberately not \p{L}: Hermes doesn't reliably support unicode
+      // property escapes, and a throw here would break publishing outright.
+      .replace(/[^a-z0-9\u0080-\uffff]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80)
+    const slug = `${base || 'essay'}-${Date.now().toString(36)}`
     const words = wContent.trim().split(/\s+/).length
     const { error } = await supabase.from('articles').insert({
       title: wTitle.trim(),
@@ -94,6 +100,7 @@ export default function EssaysScreen({
       excerpt: wContent.trim().slice(0, 180),
       content: wContent.trim(),
       topic: 'Essays',
+      cover_image: wCover.trim() || null,
       status,
       author_id: userId,
       author_email: email,
@@ -108,6 +115,7 @@ export default function EssaysScreen({
       setWriting(false)
       setWTitle('')
       setWContent('')
+      setWCover('')
       Alert.alert(
         'AliNoor',
         status === 'published' ? 'Essay published!' : 'Draft saved.',
@@ -322,6 +330,16 @@ export default function EssaysScreen({
               placeholderTextColor={T.faint}
             />
             <TextInput
+              style={s.composeCover}
+              value={wCover}
+              onChangeText={setWCover}
+              placeholder="Cover image URL (optional)"
+              placeholderTextColor={T.faint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+            <TextInput
               style={s.composeBody}
               value={wContent}
               onChangeText={setWContent}
@@ -472,6 +490,13 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: T.ink,
     marginTop: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: T.line,
+  },
+  composeCover: {
+    fontSize: 13,
+    color: T.ink3,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderColor: T.line,
