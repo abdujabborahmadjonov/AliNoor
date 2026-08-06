@@ -101,6 +101,22 @@ export const dateInTz = (tz: string, d: Date = new Date()) => {
   }
 }
 
+// Minutes past local midnight in the given IANA timezone (for ring angles).
+export const minutesInTz = (d: Date, tz: string) => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d)
+    const [h, m] = parts.split(':').map(Number)
+    return h * 60 + m
+  } catch {
+    return d.getHours() * 60 + d.getMinutes()
+  }
+}
+
 export const countdown = (to: Date, now: Date = new Date()) => {
   const ms = Math.max(0, to.getTime() - now.getTime())
   const h = Math.floor(ms / 3_600_000)

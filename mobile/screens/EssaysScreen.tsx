@@ -186,6 +186,15 @@ export default function EssaysScreen({
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} />
         }
+        ListHeaderComponent={
+          <View style={s.hero}>
+            <Text style={s.heroMicro}>A HOME FOR THOUGHTFUL WRITING</Text>
+            <Text style={s.heroTitle}>
+              Write in the quiet.{'\n'}Read in the{' '}
+              <Text style={s.heroLight}>light</Text>.
+            </Text>
+          </View>
+        }
         ListFooterComponent={
           loadingMore ? (
             <ActivityIndicator color={T.ink} style={{ marginVertical: 20 }} />
@@ -318,6 +327,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  hero: { paddingTop: 22, paddingBottom: 8 },
+  heroMicro: { fontSize: 10, letterSpacing: 1.8, color: T.mute },
+  heroTitle: {
+    fontSize: 30,
+    lineHeight: 37,
+    fontWeight: '600',
+    color: T.ink,
+    letterSpacing: -0.5,
+    marginTop: 10,
+  },
+  heroLight: { textDecorationLine: 'underline', textDecorationColor: T.warn },
   card: {
     backgroundColor: T.panel,
     borderWidth: 1,
