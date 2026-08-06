@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
-import AuthGate from '@/app/components/AuthGate'
 import PrayerRing from '@/app/components/PrayerRing'
 import { City, findCity } from '@/lib/cities'
 import {
@@ -103,7 +102,7 @@ function MonthCalendar({
   )
 }
 
-function PageInner() {
+export default function PageInner() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [now, setNow] = useState(new Date())
@@ -354,13 +353,5 @@ function PageInner() {
         </div>
       </div>
     </AppShell>
-  )
-}
-
-export default function GatedPage() {
-  return (
-    <AuthGate>
-      <PageInner />
-    </AuthGate>
   )
 }

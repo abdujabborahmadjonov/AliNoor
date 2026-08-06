@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
-import AuthGate from '@/app/components/AuthGate'
 import { planningDay } from '@/lib/prayer'
 import {
   CATEGORIES,
@@ -22,7 +21,7 @@ import {
 
 const GRID_DAYS = 60
 
-function PageInner() {
+export default function PageInner() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<HabitLogs>({})
   const [today, setToday] = useState('')
@@ -216,13 +215,5 @@ function PageInner() {
         })}
       </div>
     </AppShell>
-  )
-}
-
-export default function GatedPage() {
-  return (
-    <AuthGate>
-      <PageInner />
-    </AuthGate>
   )
 }

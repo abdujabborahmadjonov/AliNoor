@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/app/components/AppShell'
-import AuthGate from '@/app/components/AuthGate'
 import { CITIES, findCity } from '@/lib/cities'
 import { supabase } from '@/lib/supabase'
 import {
@@ -23,7 +22,7 @@ const METHODS: Array<{ value: AppSettings['method']; label: string }> = [
   { value: 'Karachi', label: 'University of Karachi' },
 ]
 
-function PageInner() {
+export default function PageInner() {
   const router = useRouter()
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [user, setUser] = useState<any>(null)
@@ -188,13 +187,5 @@ function PageInner() {
         </section>
       </div>
     </AppShell>
-  )
-}
-
-export default function GatedPage() {
-  return (
-    <AuthGate>
-      <PageInner />
-    </AuthGate>
   )
 }
