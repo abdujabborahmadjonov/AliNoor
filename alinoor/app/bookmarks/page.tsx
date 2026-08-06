@@ -43,51 +43,62 @@ export default function BookmarksPage() {
 
       setUser(data.user)
 
-      const { data: bookmarksData } = await supabase
-        .from('bookmarks')
-        .select(`
-          id,
-          article_id,
-          created_at,
-          articles (
+      try {
+        const { data: bookmarksData } = await supabase
+          .from('bookmarks')
+          .select(`
             id,
-            title,
-            slug,
-            excerpt,
-            topic,
-            author_email,
-            author_name,
-            views_count,
-            likes_count
+            article_id,
+            created_at,
+            articles (
+              id,
+              title,
+              slug,
+              excerpt,
+              topic,
+              author_email,
+              author_name,
+              views_count,
+              likes_count
+            )
+          `)
+          .eq('user_id', data.user.id)
+          .order('created_at', { ascending: false })
+
+        if (bookmarksData) {
+          // RLS only exposes published articles, so a bookmark whose essay was
+          // unpublished comes back with a null `articles` — drop those rows.
+          const visible = bookmarksData.filter(
+            (bookmark: any) => bookmark.articles
           )
-        `)
-        .eq('user_id', data.user.id)
-        .order('created_at', { ascending: false })
 
-      if (bookmarksData) {
-        // Get author names
-        const bookmarksWithAuthors = await Promise.all(
-          bookmarksData.map(async (bookmark: any) => {
-            if (bookmark.articles?.author_name) {
-              return { ...bookmark, author_name: bookmark.articles.author_name }
-            }
+          // Get author names
+          const bookmarksWithAuthors = await Promise.all(
+            visible.map(async (bookmark: any) => {
+              if (bookmark.articles.author_name) {
+                return { ...bookmark, author_name: bookmark.articles.author_name }
+              }
 
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('email', bookmark.articles.author_email)
-              .single()
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('email', bookmark.articles.author_email)
+                .maybeSingle()
 
-            return {
-              ...bookmark,
-              author_name: profile?.full_name || bookmark.articles.author_email.split('@')[0]
-            }
-          })
-        )
-        setBookmarks(bookmarksWithAuthors)
+              return {
+                ...bookmark,
+                author_name:
+                  profile?.full_name ||
+                  bookmark.articles.author_email?.split('@')[0] ||
+                  'anon'
+              }
+            })
+          )
+          setBookmarks(bookmarksWithAuthors)
+        }
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     load()

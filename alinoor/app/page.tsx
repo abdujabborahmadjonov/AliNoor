@@ -65,16 +65,19 @@ export default function LandingPage() {
     [settings, now]
   )
 
+  // Formatted from the window's closing Maghrib, not `now`: Intl rolls the
+  // Hijri date at civil midnight, which between Maghrib and midnight would
+  // print a date one day behind the timeline shown right beside it.
   const hijri = useMemo(() => {
     try {
       return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
         day: 'numeric',
         month: 'long',
-      }).format(now)
+      }).format(day ? day.end : now)
     } catch {
       return ''
     }
-  }, [now])
+  }, [day, now])
 
   return (
     <div className="min-h-screen bg-bg">

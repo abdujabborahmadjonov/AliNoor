@@ -87,11 +87,19 @@ function WriteForm() {
     }
   }, [editId, user, router])
 
+  // Titles here are usually Uzbek — Latin or Cyrillic. Stripping everything
+  // outside [a-z0-9] left those titles with an empty slug, which collides with
+  // the unique constraint on the second such essay, so keep any letter or
+  // digit and always append a short suffix to guarantee uniqueness.
   const generateSlug = (title: string) => {
-    return title
+    const base = title
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80)
+    return `${base || 'essay'}-${Date.now().toString(36)}`
   }
 
   const handleSubmit = async (status: 'draft' | 'published') => {

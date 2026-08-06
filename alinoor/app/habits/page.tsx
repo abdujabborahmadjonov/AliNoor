@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import AuthGate from '@/app/components/AuthGate'
-import { findCity } from '@/lib/cities'
+import { planningDay } from '@/lib/prayer'
 import {
   CATEGORIES,
   CATEGORY_DOT,
@@ -12,7 +12,6 @@ import {
   Habit,
   HabitLogs,
   addDays,
-  dateInTz,
   loadHabitLogs,
   loadHabits,
   loadSettings,
@@ -34,7 +33,17 @@ function PageInner() {
   useEffect(() => {
     setHabits(loadHabits())
     setLogs(loadHabitLogs())
-    setToday(dateInTz(findCity(loadSettings().city).tz))
+
+    // Same day key Today uses, and re-read rather than frozen at mount: a tab
+    // left open overnight would otherwise still mark yesterday's cell as today.
+    const sync = () => setToday(planningDay(loadSettings()))
+    sync()
+    const t = setInterval(sync, 60_000)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', sync)
+    }
   }, [])
 
   const days = useMemo(() => {

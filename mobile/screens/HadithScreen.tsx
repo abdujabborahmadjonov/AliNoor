@@ -43,6 +43,16 @@ const fetchOne = async (n: number): Promise<Hadith | null> => {
   }
 }
 
+// Bukhari's numbering has gaps between books (…520, then 522), so ±1 can land
+// on a hadith that does not exist — step through the book table instead.
+const step = (n: number, dir: 1 | -1) => {
+  const i = BUKHARI_BOOKS.findIndex(b => n >= b.first && n <= b.last)
+  const b = BUKHARI_BOOKS[i]
+  if (!b) return null
+  if (dir === 1) return n < b.last ? n + 1 : BUKHARI_BOOKS[i + 1]?.first ?? null
+  return n > b.first ? n - 1 : BUKHARI_BOOKS[i - 1]?.last ?? null
+}
+
 export default function HadithScreen() {
   const [bookNo, setBookNo] = useState(1)
   const [pickBook, setPickBook] = useState(false)
@@ -51,8 +61,9 @@ export default function HadithScreen() {
   const [loading, setLoading] = useState(false)
 
   const book = BUKHARI_BOOKS.find(b => b.n === bookNo)!
-  const total = BUKHARI_BOOKS[BUKHARI_BOOKS.length - 1].last
   const openData = open ? cache[open] : null
+  const prevNo = open ? step(open, -1) : null
+  const nextNo = open ? step(open, 1) : null
 
   const openOne = async (n: number) => {
     setOpen(n)
@@ -61,6 +72,14 @@ export default function HadithScreen() {
     const h = await fetchOne(n)
     if (h) setCache(c => ({ ...c, [n]: h }))
     setLoading(false)
+  }
+
+  // Stepping past a book boundary moves the grid to the book that owns it.
+  const goTo = (n: number | null) => {
+    if (n === null) return
+    const b = BUKHARI_BOOKS.find(x => n >= x.first && n <= x.last)
+    if (b) setBookNo(b.n)
+    openOne(n)
   }
 
   return (
@@ -108,14 +127,14 @@ export default function HadithScreen() {
                 </Text>
                 <View style={s.navBtns}>
                   <TouchableOpacity
-                    disabled={open <= 1}
-                    onPress={() => openOne(open - 1)}
+                    disabled={prevNo === null}
+                    onPress={() => goTo(prevNo)}
                     style={s.navBtn}>
                     <Text style={s.navBtnText}>←</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    disabled={open >= total}
-                    onPress={() => openOne(open + 1)}
+                    disabled={nextNo === null}
+                    onPress={() => goTo(nextNo)}
                     style={s.navBtn}>
                     <Text style={s.navBtnText}>→</Text>
                   </TouchableOpacity>
@@ -131,7 +150,10 @@ export default function HadithScreen() {
       )}
       <View style={{ height: 30 }} />
 
-      <Modal visible={pickBook} animationType="slide">
+      <Modal
+        visible={pickBook}
+        animationType="slide"
+        onRequestClose={() => setPickBook(false)}>
         <View style={s.pickerWrap}>
           <View style={s.pickerHead}>
             <Text style={s.pickerTitle}>Sahih al-Bukhari · 97 books</Text>

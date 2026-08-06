@@ -64,20 +64,83 @@ const SYNC_KEYS = [
   'alinoor_arabic_stars',
 ]
 
+// Which account the cached data in this browser belongs to. Without this a
+// second user signing in on the same device would inherit — and silently
+// upload into their own account — whatever the previous user left behind.
+const OWNER_KEY = 'alinoor_owner'
+
 let cloudUser: string | null = null
+let hydratedFor: string | null = null
+
+// Sync failures must be visible: a silent failure looks identical to "you have
+// no data", and the next local write would then overwrite the cloud with it.
+let syncError = false
+const syncListeners = new Set<(failed: boolean) => void>()
+
+const setSyncError = (failed: boolean) => {
+  if (failed === syncError) return
+  syncError = failed
+  syncListeners.forEach((fn) => fn(syncError))
+}
+
+export const getSyncError = () => syncError
+
+export const onSyncStatus = (fn: (failed: boolean) => void) => {
+  syncListeners.add(fn)
+  fn(syncError)
+  return () => {
+    syncListeners.delete(fn)
+  }
+}
+
+export const clearLocalData = () => {
+  try {
+    for (const key of SYNC_KEYS) window.localStorage.removeItem(key)
+    window.localStorage.removeItem(OWNER_KEY)
+  } catch {}
+}
 
 export const setCloudUser = (id: string | null) => {
   cloudUser = id
+  if (id === null) hydratedFor = null
+}
+
+export const signOutAndClear = async () => {
+  setCloudUser(null)
+  clearLocalData()
+  setSyncError(false)
+  // 'local' so signing out of the laptop does not kill the phone's session.
+  await supabase.auth.signOut({ scope: 'local' })
 }
 
 // Pull the user's data down; cloud wins, but local-only keys (data created
 // before the first login on this device) are pushed up instead of lost.
-export const cloudHydrate = async (userId: string) => {
+export const cloudHydrate = async (userId: string): Promise<{ ok: boolean }> => {
   cloudUser = userId
-  const { data } = await supabase
+  if (hydratedFor === userId) return { ok: true }
+
+  let previousOwner: string | null = null
+  try {
+    previousOwner = window.localStorage.getItem(OWNER_KEY)
+  } catch {}
+
+  // Someone else used this browser: their cache is not ours to read or upload.
+  // A null owner means the data was made while signed out, so it is genuinely
+  // this user's and still gets pushed up below.
+  const inherited = previousOwner === null
+  if (previousOwner !== null && previousOwner !== userId) clearLocalData()
+
+  const { data, error } = await supabase
     .from('user_data')
     .select('key, value')
     .eq('user_id', userId)
+
+  // Treat an unreadable cloud as unknown, never as empty — carrying on here
+  // would show the account as blank and let the next write erase it.
+  if (error) {
+    setSyncError(true)
+    return { ok: false }
+  }
 
   const cloudKeys = new Set((data || []).map((r) => r.key))
   for (const row of data || []) {
@@ -85,18 +148,28 @@ export const cloudHydrate = async (userId: string) => {
       window.localStorage.setItem(row.key, JSON.stringify(row.value))
     } catch {}
   }
-  for (const key of SYNC_KEYS) {
-    if (!cloudKeys.has(key)) {
+
+  if (inherited || previousOwner === userId) {
+    for (const key of SYNC_KEYS) {
+      if (cloudKeys.has(key)) continue
       const raw = window.localStorage.getItem(key)
-      if (raw) {
-        try {
-          await supabase
-            .from('user_data')
-            .upsert({ user_id: userId, key, value: JSON.parse(raw) })
-        } catch {}
-      }
+      if (!raw) continue
+      const { error: upErr } = await supabase
+        .from('user_data')
+        .upsert(
+          { user_id: userId, key, value: JSON.parse(raw) },
+          { onConflict: 'user_id,key' }
+        )
+      if (upErr) setSyncError(true)
     }
   }
+
+  try {
+    window.localStorage.setItem(OWNER_KEY, userId)
+  } catch {}
+  hydratedFor = userId
+  setSyncError(false)
+  return { ok: true }
 }
 
 const read = <T,>(key: string, fallback: T): T => {
@@ -116,15 +189,18 @@ const write = (key: string, value: unknown) => {
   if (cloudUser) {
     supabase
       .from('user_data')
-      .upsert({
-        user_id: cloudUser,
-        key,
-        value,
-        updated_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          user_id: cloudUser,
+          key,
+          value,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,key' }
+      )
       .then(
-        () => {},
-        () => {}
+        ({ error }) => setSyncError(!!error),
+        () => setSyncError(true)
       )
   }
 }

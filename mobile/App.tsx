@@ -59,27 +59,54 @@ export default function App() {
   const [booted, setBooted] = useState(false)
   const [tab, setTab] = useState<Tab>('today')
   const [moreOpen, setMoreOpen] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
+    let alive = true
     // Never hang on boot: if session restore is slow (offline / expired
     // token refresh), start signed-out and let onAuthStateChange catch up.
     const fallback = setTimeout(() => setBooted(true), 4000)
-    supabase.auth.getSession().then(({ data }) => {
-      clearTimeout(fallback)
-      setSession(data.session)
-      setBooted(true)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!alive) return
+        clearTimeout(fallback)
+        setSession(data.session)
+        setBooted(true)
+      })
+      .catch(() => {
+        if (alive) setBooted(true)
+      })
     const { data: sub } = supabase.auth.onAuthStateChange(
       (_event, newSession) => setSession(newSession),
     )
 
     // Google sign-in returns here as alinoor://auth?code=… (PKCE) or, as a
-    // fallback, with tokens in the URL fragment.
-    const handleUrl = async (url: string | null) => {
-      if (!url) return
+    // fallback, with tokens in the URL fragment. getInitialURL and the
+    // listener can both deliver the same redirect, and a code is single-use.
+    let lastUrl = ''
+    const finish = async (
+      run: () => Promise<{ error: { message: string } | null }>,
+    ) => {
+      setFinishing(true)
+      let message: string | null = null
+      try {
+        const { error } = await run()
+        message = error ? error.message : null
+      } catch (e) {
+        message = e instanceof Error ? e.message : 'Sign-in could not complete.'
+      }
+      if (!alive) return
+      setFinishing(false)
+      setAuthError(message)
+    }
+    const handleUrl = (url: string | null) => {
+      if (!url || url === lastUrl) return
+      lastUrl = url
       const codeMatch = url.match(/[?&]code=([^&#]+)/)
       if (codeMatch) {
-        await supabase.auth.exchangeCodeForSession(codeMatch[1])
+        finish(() => supabase.auth.exchangeCodeForSession(codeMatch[1]))
         return
       }
       if (!url.includes('#')) return
@@ -87,13 +114,15 @@ export default function App() {
       const access_token = params.get('access_token')
       const refresh_token = params.get('refresh_token')
       if (access_token && refresh_token) {
-        await supabase.auth.setSession({ access_token, refresh_token })
+        finish(() => supabase.auth.setSession({ access_token, refresh_token }))
       }
     }
-    Linking.getInitialURL().then(handleUrl)
+    Linking.getInitialURL().then(handleUrl).catch(() => {})
     const linkSub = Linking.addEventListener('url', e => handleUrl(e.url))
 
     return () => {
+      alive = false
+      clearTimeout(fallback)
       sub.subscription.unsubscribe()
       linkSub.remove()
     }
@@ -113,7 +142,7 @@ export default function App() {
       <SafeAreaProvider>
         <SafeAreaView style={s.app} edges={['top', 'left', 'right']}>
           <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
-          <AuthScreen />
+          <AuthScreen finishing={finishing} authError={authError} />
         </SafeAreaView>
       </SafeAreaProvider>
     )

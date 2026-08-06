@@ -10,7 +10,9 @@ import {
   AppSettings,
   DEFAULT_SETTINGS,
   loadSettings,
+  onSyncStatus,
   saveSettings,
+  signOutAndClear,
 } from '@/lib/store'
 
 const METHODS: Array<{ value: AppSettings['method']; label: string }> = [
@@ -26,10 +28,12 @@ function PageInner() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [user, setUser] = useState<any>(null)
   const [saved, setSaved] = useState(false)
+  const [syncFailed, setSyncFailed] = useState(false)
 
   useEffect(() => {
     setSettings(loadSettings())
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    return onSyncStatus(setSyncFailed)
   }, [])
 
   const update = (patch: Partial<AppSettings>) => {
@@ -41,7 +45,7 @@ function PageInner() {
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
+    await signOutAndClear()
     router.push('/login')
   }
 
@@ -50,10 +54,16 @@ function PageInner() {
   return (
     <AppShell title="Settings" subtitle="account preferences">
       <div className="space-y-6 max-w-3xl">
-        {saved && (
-          <p className="font-mono text-[11px] text-good uppercase tracking-widest">
-            saved
+        {syncFailed ? (
+          <p className="font-mono text-[11px] text-ember uppercase tracking-widest">
+            saved on this device only — sync is failing
           </p>
+        ) : (
+          saved && (
+            <p className="font-mono text-[11px] text-good uppercase tracking-widest">
+              saved
+            </p>
+          )
         )}
 
         {/* Account */}

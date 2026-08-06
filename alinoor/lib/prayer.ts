@@ -5,6 +5,7 @@ import {
   PrayerTimes,
 } from 'adhan'
 import { findCity } from '@/lib/cities'
+import { dateInTz } from '@/lib/store'
 import type { AppSettings } from '@/lib/store'
 
 export type PrayerName = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
@@ -29,11 +30,30 @@ const methodParams = (method: AppSettings['method']) => {
   }
 }
 
-export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
+const ymdParts = (tz: string, date: Date): [number, number, number] => {
+  const [y, m, d] = dateInTz(tz, date).split('-').map(Number)
+  return [y, m, d]
+}
+
+// adhan reads the calendar date straight off the Date in whatever timezone the
+// browser happens to be in, so a traveller in Edmonton looking at Tashkent used
+// to get the wrong day's times. Always anchor on the city's own calendar date,
+// at local noon — far enough from either midnight that no browser timezone can
+// shift which day adhan sees.
+const timesForYmd = (
+  settings: AppSettings,
+  y: number,
+  m: number,
+  d: number
+): TimedPrayer[] => {
   const city = findCity(settings.city)
   const params = methodParams(settings.method)
   params.madhab = settings.madhab === 'Hanafi' ? Madhab.Hanafi : Madhab.Shafi
-  const pt = new PrayerTimes(new Coordinates(city.lat, city.lng), date, params)
+  const pt = new PrayerTimes(
+    new Coordinates(city.lat, city.lng),
+    new Date(y, m - 1, d, 12),
+    params
+  )
   return [
     { name: 'Fajr', time: pt.fajr },
     { name: 'Sunrise', time: pt.sunrise },
@@ -44,35 +64,64 @@ export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
   ]
 }
 
+export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
+  const city = findCity(settings.city)
+  const [y, m, d] = ymdParts(city.tz, date)
+  return timesForYmd(settings, y, m, d)
+}
+
 // The Islamic day runs Maghrib to Maghrib: the sequence starts at the most
 // recent Maghrib and ends just before the next one.
 export const maghribDay = (settings: AppSettings, now: Date = new Date()) => {
-  const dayMs = 24 * 60 * 60 * 1000
-  const yesterday = timesFor(settings, new Date(now.getTime() - dayMs))
-  const today = timesFor(settings, now)
-  const tomorrow = timesFor(settings, new Date(now.getTime() + dayMs))
+  const city = findCity(settings.city)
+  const [y, m, d] = ymdParts(city.tz, now)
 
-  const all = [...yesterday, ...today, ...tomorrow]
+  // Calendar arithmetic rather than ±86 400 000 ms: on a DST fall-back day the
+  // millisecond step lands back on the same local date, which listed one
+  // neighbour's prayers twice and skipped the other's entirely.
+  const all = [
+    ...timesForYmd(settings, y, m, d - 1),
+    ...timesForYmd(settings, y, m, d),
+    ...timesForYmd(settings, y, m, d + 1),
+  ].sort((a, b) => a.time.getTime() - b.time.getTime())
+
   const maghribs = all.filter((p) => p.name === 'Maghrib')
-  const start =
-    [...maghribs].reverse().find((m) => m.time <= now) || maghribs[0]
-  const end = maghribs.find((m) => m.time > start.time)!
+  let startIdx = -1
+  for (let i = 0; i < maghribs.length; i++) {
+    if (maghribs[i].time <= now) startIdx = i
+  }
+  // The three-day span always brackets `now`; bail rather than silently
+  // returning a window that starts in the future.
+  if (startIdx < 0 || startIdx + 1 >= maghribs.length) return null
+
+  const start = maghribs[startIdx]
+  const end = maghribs[startIdx + 1]
 
   const sequence = all
-    .filter((p) => p.time >= start.time && p.time < end.time)
     .filter((p) => p.name !== 'Sunrise')
-    .sort((a, b) => a.time.getTime() - b.time.getTime())
+    .filter((p) => p.time >= start.time && p.time < end.time)
 
   const next =
-    all
-      .filter((p) => p.name !== 'Sunrise')
-      .sort((a, b) => a.time.getTime() - b.time.getTime())
-      .find((p) => p.time > now) || sequence[0]
+    all.filter((p) => p.name !== 'Sunrise').find((p) => p.time > now) ||
+    sequence[0]
 
   const current =
     [...sequence].reverse().find((p) => p.time <= now) || sequence[0]
 
-  return { sequence, next, current }
+  return { sequence, next, current, start: start.time, end: end.time }
+}
+
+// The single source of truth for "which day am I planning?". Tasks, habit logs
+// and statistics must all agree, so they all key off the Maghrib-to-Maghrib
+// window's closing date rather than the civil date — otherwise anything entered
+// between Maghrib and midnight lands on the previous day and appears to vanish.
+export const planningDay = (
+  settings: AppSettings,
+  now: Date = new Date()
+): string => {
+  const city = findCity(settings.city)
+  const day = maghribDay(settings, now)
+  return dateInTz(city.tz, day ? day.end : now)
 }
 
 export const fmtTime = (d: Date, tz: string) =>

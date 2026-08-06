@@ -47,16 +47,34 @@ export default function LoginPage() {
   }
 
   const checkProfileCompletion = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, country, phone, age')
-      .eq('id', userId)
-      .single()
+    // Fail open: a transient lookup failure must not push a user whose profile
+    // is already complete back through the "tell us about you" form. The
+    // complete-profile route re-checks anyway.
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('full_name, country, phone, age')
+        .eq('id', userId)
+        .maybeSingle()
 
-    const complete =
-      profile && profile.full_name && profile.country && profile.phone && profile.age
+      if (error) {
+        router.push('/')
+        return
+      }
 
-    router.push(complete ? '/' : '/complete-profile')
+      const complete =
+        profile &&
+        profile.full_name &&
+        profile.country &&
+        profile.phone &&
+        profile.age
+
+      router.push(complete ? '/' : '/complete-profile')
+    } catch {
+      router.push('/')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signInWithEmail = async (e: React.FormEvent) => {

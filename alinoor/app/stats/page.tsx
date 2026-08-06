@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import AuthGate from '@/app/components/AuthGate'
-import { findCity } from '@/lib/cities'
+import { planningDay } from '@/lib/prayer'
 import {
   CATEGORIES,
   CATEGORY_DOT,
@@ -12,7 +12,6 @@ import {
   HabitLogs,
   Task,
   addDays,
-  dateInTz,
   loadHabitLogs,
   loadHabits,
   loadSettings,
@@ -31,7 +30,17 @@ function PageInner() {
     setHabits(loadHabits())
     setLogs(loadHabitLogs())
     setTasks(loadTasks())
-    setToday(dateInTz(findCity(loadSettings().city).tz))
+
+    // Same day key Today and Habits use, refreshed so a long-open tab doesn't
+    // keep reporting yesterday.
+    const sync = () => setToday(planningDay(loadSettings()))
+    sync()
+    const t = setInterval(sync, 60_000)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', sync)
+    }
   }, [])
 
   const days = useMemo(() => {
@@ -59,10 +68,15 @@ function PageInner() {
     const perCategory: Record<string, number> = {}
     CATEGORIES.forEach((c) => (perCategory[c] = 0))
     const activeDays = new Set<string>()
+    // Counters cover the visible window, but the streak walks the full history
+    // — bounding it by the window capped a genuine 90-day streak at 30 and
+    // disagreed with the figure the Habits page shows.
+    const everActive = new Set<string>()
 
     for (const h of habits) {
       const hl = logs[h.id] || {}
       for (const d of Object.keys(hl)) {
+        everActive.add(d)
         if (daySet.has(d)) {
           completions++
           perCategory[h.category]++
@@ -75,13 +89,15 @@ function PageInner() {
       (t) => t.done && daySet.has(t.date)
     ).length
     tasks.forEach((t) => {
-      if (t.done && daySet.has(t.date)) activeDays.add(t.date)
+      if (!t.done) return
+      everActive.add(t.date)
+      if (daySet.has(t.date)) activeDays.add(t.date)
     })
 
     let streak = 0
     let d = today
-    if (!activeDays.has(d)) d = addDays(d, -1)
-    while (activeDays.has(d)) {
+    if (!everActive.has(d)) d = addDays(d, -1)
+    while (everActive.has(d)) {
       streak++
       d = addDays(d, -1)
     }

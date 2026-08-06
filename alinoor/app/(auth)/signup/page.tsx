@@ -18,7 +18,8 @@ export default function SignupPage() {
     password: '',
     full_name: '',
     country: '',
-    birthdate: '',
+    phone: '',
+    age: '',
     bio: ''
   })
 
@@ -28,7 +29,7 @@ export default function SignupPage() {
     setMessage(null)
 
     // Validate required fields
-    if (!formData.email || !formData.password || !formData.full_name || !formData.country || !formData.birthdate) {
+    if (!formData.email || !formData.password || !formData.full_name || !formData.country || !formData.phone || !formData.age) {
       setMessage('Please fill in all required fields')
       setLoading(false)
       return
@@ -59,7 +60,8 @@ export default function SignupPage() {
             email: formData.email.trim(),
             full_name: formData.full_name,
             country: formData.country,
-            birthdate: formData.birthdate,
+            phone: formData.phone,
+            age: Number(formData.age) || null,
             bio: formData.bio,
           })
         }
@@ -77,7 +79,8 @@ export default function SignupPage() {
           password: '',
           full_name: '',
           country: '',
-          birthdate: '',
+          phone: '',
+          age: '',
           bio: ''
         })
 
@@ -133,15 +136,35 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div>
-              <label className="microlabel block mb-2">Birth date *</label>
-              <input
-                type="date"
-                required
-                value={formData.birthdate}
-                onChange={(e) => setFormData({...formData, birthdate: e.target.value})}
-                className={inputClass}
-              />
+            {/* Phone and age, not birth date: these are the fields the
+                profile-completeness gate checks for, and collecting anything
+                else here sends the user straight back to another form. */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="microlabel block mb-2">Phone *</label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="+998 90 123 45 67"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className="microlabel block mb-2">Age *</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={120}
+                  placeholder="24"
+                  value={formData.age}
+                  onChange={(e) => setFormData({...formData, age: e.target.value})}
+                  className={inputClass}
+                />
+              </div>
             </div>
 
             <div className="pt-5 border-t border-line">

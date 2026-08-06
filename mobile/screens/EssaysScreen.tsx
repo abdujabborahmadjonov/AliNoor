@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -65,11 +65,13 @@ export default function EssaysScreen({
   const [end, setEnd] = useState(false)
   const [open, setOpen] = useState<Article | null>(null)
   const [openBody, setOpenBody] = useState<string[] | null>(null)
+  const [bodyFailed, setBodyFailed] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [writing, setWriting] = useState(false)
   const [wTitle, setWTitle] = useState('')
   const [wContent, setWContent] = useState('')
   const [publishing, setPublishing] = useState(false)
+  const bodyReq = useRef(0)
 
   const publish = async (status: 'draft' | 'published') => {
     if (!userId) return
@@ -135,31 +137,56 @@ export default function EssaysScreen({
   }
 
   useEffect(() => {
+    let alive = true
     fetchPage(0).then(rows => {
+      if (!alive) return
       setArticles(rows)
       setEnd(rows.length < PAGE)
       setLoading(false)
     })
+    return () => {
+      alive = false
+    }
   }, [])
 
   const more = async () => {
     if (loadingMore || end) return
     setLoadingMore(true)
     const rows = await fetchPage(articles.length)
-    setArticles(a => [...a, ...rows])
+    // Offset paging over a created_at DESC list repeats a row whenever an
+    // essay is published between pages — duplicate ids break the list keys.
+    setArticles(a => {
+      const seen = new Set(a.map(x => x.id))
+      return [...a, ...rows.filter((r: Article) => !seen.has(r.id))]
+    })
     setEnd(rows.length < PAGE)
     setLoadingMore(false)
   }
 
   const openEssay = async (a: Article) => {
+    const req = ++bodyReq.current
     setOpen(a)
     setOpenBody(null)
-    const { data } = await supabase
+    setBodyFailed(false)
+    const { data, error } = await supabase
       .from('articles')
       .select('content')
       .eq('id', a.id)
       .single()
+    // A slower earlier request must not paint its text under this title.
+    if (req !== bodyReq.current) return
+    if (error) {
+      setBodyFailed(true)
+      return
+    }
     setOpenBody(htmlToParagraphs(data?.content || ''))
+  }
+
+  const closeEssay = () => {
+    bodyReq.current++
+    setOpen(null)
+    setOpenBody(null)
+    setBodyFailed(false)
   }
 
   if (loading) {
@@ -235,10 +262,10 @@ export default function EssaysScreen({
         )}
       />
 
-      <Modal visible={!!open} animationType="slide" onRequestClose={() => setOpen(null)}>
+      <Modal visible={!!open} animationType="slide" onRequestClose={closeEssay}>
         <View style={s.readerWrap}>
           <View style={s.readerHead}>
-            <TouchableOpacity onPress={() => setOpen(null)}>
+            <TouchableOpacity onPress={closeEssay}>
               <Text style={s.back}>← Essays</Text>
             </TouchableOpacity>
           </View>
@@ -251,7 +278,15 @@ export default function EssaysScreen({
             {!!open?.cover_image && (
               <Image source={{ uri: open.cover_image }} style={s.readerCover} />
             )}
-            {openBody === null ? (
+            {bodyFailed ? (
+              <TouchableOpacity
+                style={s.bodyRetry}
+                onPress={() => open && openEssay(open)}>
+                <Text style={s.bodyRetryText}>
+                  Couldn’t load this essay — tap to retry
+                </Text>
+              </TouchableOpacity>
+            ) : openBody === null ? (
               <ActivityIndicator color={T.ink} style={{ marginTop: 40 }} />
             ) : (
               openBody.map((p, i) => (
@@ -404,6 +439,15 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   para: { fontSize: 16, lineHeight: 27, color: T.ink2, marginBottom: 16 },
+  bodyRetry: {
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  bodyRetryText: { fontSize: 13, color: T.ember },
   writeFab: {
     position: 'absolute',
     right: 18,

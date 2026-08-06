@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,13 +15,24 @@ import { supabase } from '../lib/supabase'
 import { T } from '../lib/theme'
 
 // The app's front door: nobody browses without an account.
-export default function AuthScreen() {
+export default function AuthScreen({
+  finishing,
+  authError,
+}: {
+  finishing: boolean
+  authError: string | null
+}) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [busy, setBusy] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  // A failed deep-link exchange lands here; the usual clearing rules apply.
+  useEffect(() => {
+    if (authError) setMessage(authError)
+  }, [authError])
 
   const friendly = (m: string) =>
     m.includes('Invalid login credentials')
@@ -78,9 +89,16 @@ export default function AuthScreen() {
 
         {/* Auth card */}
         <View style={s.card}>
+          {finishing && (
+            <View style={s.finishing}>
+              <ActivityIndicator color={T.ink2} />
+              <Text style={s.finishingText}>Finishing sign-in…</Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={s.googleBtn}
-            disabled={googleBusy || busy}
+            disabled={googleBusy || busy || finishing}
             onPress={google}>
             {googleBusy ? (
               <ActivityIndicator color={T.ink2} />
@@ -124,7 +142,7 @@ export default function AuthScreen() {
           <TouchableOpacity
             style={s.primary}
             onPress={submit}
-            disabled={busy || googleBusy}>
+            disabled={busy || googleBusy || finishing}>
             {busy ? (
               <ActivityIndicator color={T.bg} />
             ) : (
@@ -206,6 +224,13 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
   },
+  finishing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  finishingText: { fontSize: 13, color: T.ink3 },
   googleBtn: {
     borderWidth: 1,
     borderColor: T.lineStrong,

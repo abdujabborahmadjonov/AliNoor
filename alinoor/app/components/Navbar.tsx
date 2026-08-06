@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { signOutAndClear } from '@/lib/store'
 import ThemeToggle from '@/app/components/ThemeToggle'
 
 export default function Navbar() {
@@ -29,7 +30,7 @@ export default function Navbar() {
   }, [])
 
   const logout = async () => {
-    await supabase.auth.signOut()
+    await signOutAndClear()
     setMenuOpen(false)
     router.push('/login')
     router.refresh()

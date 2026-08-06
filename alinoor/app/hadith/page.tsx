@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import { BUKHARI_BOOKS } from '@/lib/bukhari'
 
@@ -13,12 +13,18 @@ type Hadith = {
 
 const BASE = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions'
 
+// The mirror 404s on numbers that fall in the gaps between books.
+const okJson = async (r: Response) => {
+  if (!r.ok) throw new Error(`hadith-api ${r.status}`)
+  return r.json()
+}
+
 // A single hadith is fetched only when its number is tapped.
 const fetchOne = async (n: number): Promise<Hadith | null> => {
   try {
     const [en, ar] = await Promise.all([
-      fetch(`${BASE}/eng-bukhari/${n}.json`).then((r) => r.json()),
-      fetch(`${BASE}/ara-bukhari/${n}.json`).then((r) => r.json()),
+      fetch(`${BASE}/eng-bukhari/${n}.json`).then(okJson),
+      fetch(`${BASE}/ara-bukhari/${n}.json`).then(okJson),
     ])
     const e = en.hadiths?.[0]
     return {
@@ -35,12 +41,26 @@ const fetchOne = async (n: number): Promise<Hadith | null> => {
   }
 }
 
+// The numbering has gaps between books (520→522, 2383→2385, …), so a neighbour is the
+// next number some book actually contains — and it may live in a different book.
+const step = (n: number, dir: 1 | -1): { n: number; book: number } | null => {
+  const i = BUKHARI_BOOKS.findIndex((b) => n >= b.first && n <= b.last)
+  if (i === -1) return null
+  const b = BUKHARI_BOOKS[i]
+  const next = n + dir
+  if (next >= b.first && next <= b.last) return { n: next, book: b.n }
+  const nb = BUKHARI_BOOKS[i + dir]
+  if (!nb) return null
+  return { n: dir === 1 ? nb.first : nb.last, book: nb.n }
+}
+
 export default function HadithPage() {
   const [bookNo, setBookNo] = useState(1)
   const [open, setOpen] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [cache, setCache] = useState<Record<number, Hadith>>({})
   const [jump, setJump] = useState('')
+  const pendingRef = useRef<number | null>(null)
 
   const book = BUKHARI_BOOKS.find((b) => b.n === bookNo)!
   const total = BUKHARI_BOOKS[BUKHARI_BOOKS.length - 1].last
@@ -53,11 +73,25 @@ export default function HadithPage() {
 
   const openOne = async (n: number) => {
     setOpen(n)
-    if (cache[n]) return
+    if (cache[n]) {
+      pendingRef.current = null
+      setLoading(false)
+      return
+    }
+    pendingRef.current = n
     setLoading(true)
     const h = await fetchOne(n)
     if (h) setCache((c) => ({ ...c, [n]: h }))
+    // A newer tap owns the loading state now.
+    if (pendingRef.current !== n) return
+    pendingRef.current = null
     setLoading(false)
+  }
+
+  const go = (t: { n: number; book: number } | null) => {
+    if (!t) return
+    setBookNo(t.book)
+    openOne(t.n)
   }
 
   const jumpTo = (e: React.FormEvent) => {
@@ -65,7 +99,8 @@ export default function HadithPage() {
     const n = parseInt(jump, 10)
     if (!n || n < 1 || n > total) return
     const b = BUKHARI_BOOKS.find((x) => n >= x.first && n <= x.last)
-    if (b) setBookNo(b.n)
+    if (!b) return
+    setBookNo(b.n)
     openOne(n)
     setJump('')
   }
@@ -185,15 +220,15 @@ export default function HadithPage() {
                     </p>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => open > 1 && openOne(open - 1)}
-                        disabled={open <= 1}
+                        onClick={() => go(step(open, -1))}
+                        disabled={!step(open, -1)}
                         className="px-2.5 py-1.5 rounded-lg border border-line font-mono text-[11px] text-ink3 hover:text-ink disabled:opacity-40"
                       >
                         ←
                       </button>
                       <button
-                        onClick={() => open < total && openOne(open + 1)}
-                        disabled={open >= total}
+                        onClick={() => go(step(open, 1))}
+                        disabled={!step(open, 1)}
                         className="px-2.5 py-1.5 rounded-lg border border-line font-mono text-[11px] text-ink3 hover:text-ink disabled:opacity-40"
                       >
                         →

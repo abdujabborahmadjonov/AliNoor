@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AppShell from '@/app/components/AppShell'
 import { QURAN_THEMES } from '@/lib/content'
 
@@ -11,6 +11,8 @@ type Ayah = {
   en: string
   audio: string
 }
+
+type FullAyah = { n: number; ar: string; en: string; audio: string }
 
 type SurahInfo = {
   number: number
@@ -25,36 +27,43 @@ const API = 'https://api.alquran.cloud/v1'
 // Uthmani Arabic + public-domain Pickthall translation + Alafasy recitation.
 const EDITIONS = 'quran-uthmani,en.pickthall,ar.alafasy'
 
-const fetchAyah = async (ref: string): Promise<Ayah | null> => {
-  try {
-    const res = await fetch(`${API}/ayah/${ref}/editions/${EDITIONS}`)
-    const json = await res.json()
-    const [ar, en, audio] = json.data
-    return {
-      ref,
-      surahName: ar.surah.englishName,
-      ar: ar.text,
-      en: en.text,
-      audio: audio.audio || '',
-    }
-  } catch {
-    return null
+// Rejects on a bad status so an error body can't be destructured into a blank panel.
+const fetchAyah = async (ref: string, signal?: AbortSignal): Promise<Ayah> => {
+  const res = await fetch(`${API}/ayah/${ref}/editions/${EDITIONS}`, { signal })
+  if (!res.ok) throw new Error(`alquran.cloud ${res.status}`)
+  const json = await res.json()
+  const [ar, en, audio] = json.data
+  return {
+    ref,
+    surahName: ar.surah.englishName,
+    ar: ar.text,
+    en: en.text,
+    audio: audio.audio || '',
   }
 }
 
+const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError'
+
 // One shared player so a new ayah stops the previous one.
-const usePlayer = () => {
+// onStart stops the continuous-recitation player — only one of the two may sound at a time.
+const usePlayer = (onStart: () => void) => {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
+
+  const stop = () => {
+    audioRef.current?.pause()
+    audioRef.current = null
+    setPlaying(null)
+  }
 
   const toggle = (key: string, url: string) => {
     if (!url) return
     if (playing === key) {
-      audioRef.current?.pause()
-      setPlaying(null)
+      stop()
       return
     }
     audioRef.current?.pause()
+    onStart()
     const a = new Audio(url)
     audioRef.current = a
     a.onended = () => setPlaying(null)
@@ -63,8 +72,26 @@ const usePlayer = () => {
   }
 
   useEffect(() => () => audioRef.current?.pause(), [])
-  return { playing, toggle }
+  return { playing, toggle, stop }
 }
+
+const ErrorRetry = ({
+  onRetry,
+  className = '',
+}: {
+  onRetry: () => void
+  className?: string
+}) => (
+  <div className={`text-sm text-mute ${className}`}>
+    <p>Couldn&apos;t reach alquran.cloud.</p>
+    <button
+      onClick={onRetry}
+      className="mt-3 px-4 py-2 rounded-lg border border-line text-ink2 text-sm hover:border-linestrong hover:text-ink transition-colors"
+    >
+      Retry
+    </button>
+  </div>
+)
 
 const PlayButton = ({
   active,
@@ -98,38 +125,61 @@ const PlayButton = ({
 
 export default function QuranPage() {
   const [mode, setMode] = useState<'themes' | 'surahs'>('themes')
-  const { playing, toggle } = usePlayer()
+
+  // Whole-surah reading + continuous listening
+  const [playIdx, setPlayIdx] = useState<number | null>(null)
+  const seqRef = useRef<HTMLAudioElement | null>(null)
+  const reqRef = useRef(0)
+
+  // Bumping the request generation also cancels an in-flight load that would start audio.
+  const stopSequence = useCallback(() => {
+    reqRef.current++
+    seqRef.current?.pause()
+    seqRef.current = null
+    setPlayIdx(null)
+  }, [])
+
+  const { playing, toggle, stop: stopAyah } = usePlayer(stopSequence)
 
   // themes
   const [themeKey, setThemeKey] = useState(QURAN_THEMES[0].key)
   const [ayat, setAyat] = useState<Ayah[]>([])
   const [themeLoading, setThemeLoading] = useState(true)
+  const [themeError, setThemeError] = useState(false)
+  const [themeReload, setThemeReload] = useState(0)
 
   // surah browser — one ayah is fetched only when tapped
   const [surahs, setSurahs] = useState<SurahInfo[]>([])
+  const [surahsError, setSurahsError] = useState(false)
+  const [surahsReload, setSurahsReload] = useState(0)
   const [surahNo, setSurahNo] = useState(1)
   const [openAyah, setOpenAyah] = useState<number | null>(null)
   const [ayahLoading, setAyahLoading] = useState(false)
   const [cache, setCache] = useState<Record<string, Ayah>>({})
+  const pendingAyahRef = useRef<string | null>(null)
 
-  // Whole-surah reading + continuous listening
   const [surahView, setSurahView] = useState<'byayah' | 'full'>('byayah')
-  const [fullAyat, setFullAyat] = useState<
-    Array<{ n: number; ar: string; en: string; audio: string }>
-  >([])
+  const [fullAyat, setFullAyat] = useState<FullAyah[]>([])
   const [fullLoading, setFullLoading] = useState(false)
+  const [fullError, setFullError] = useState(false)
   const [fullFor, setFullFor] = useState(0)
-  const [playIdx, setPlayIdx] = useState<number | null>(null)
-  const seqRef = useRef<HTMLAudioElement | null>(null)
 
-  const loadFullSurah = async (n: number) => {
-    if (fullFor === n && fullAyat.length) return fullAyat
+  // Returns the generation id so the caller can tell whether its load is still the current one.
+  const loadFullSurah = async (
+    n: number
+  ): Promise<{ id: number; list: FullAyah[] }> => {
+    if (fullFor === n && fullAyat.length)
+      return { id: reqRef.current, list: fullAyat }
+    const id = ++reqRef.current
     setFullLoading(true)
+    setFullError(false)
     try {
       const res = await fetch(`${API}/surah/${n}/editions/${EDITIONS}`)
+      if (!res.ok) throw new Error(`alquran.cloud ${res.status}`)
       const j = await res.json()
+      if (id !== reqRef.current) return { id, list: [] }
       const [ar, en, audio] = j.data
-      const list = ar.ayahs.map((a: any, i: number) => ({
+      const list: FullAyah[] = ar.ayahs.map((a: any, i: number) => ({
         n: a.numberInSurah,
         ar: a.text,
         en: en.ayahs[i]?.text || '',
@@ -138,32 +188,29 @@ export default function QuranPage() {
       setFullAyat(list)
       setFullFor(n)
       setFullLoading(false)
-      return list
+      return { id, list }
     } catch {
+      if (id !== reqRef.current) return { id, list: [] }
       setFullLoading(false)
-      return []
+      setFullError(true)
+      return { id, list: [] }
     }
   }
 
-  const stopSequence = () => {
+  const playFrom = (i: number, list: FullAyah[]) => {
     seqRef.current?.pause()
-    seqRef.current = null
-    setPlayIdx(null)
-  }
-
-  const playFrom = (
-    i: number,
-    list: Array<{ n: number; ar: string; en: string; audio: string }>
-  ) => {
-    seqRef.current?.pause()
-    if (i >= list.length || !list[i]?.audio) {
+    // Some ayat come back without a recitation URL — skip them rather than end the surah.
+    let j = i
+    while (j < list.length && !list[j]?.audio) j++
+    if (j >= list.length) {
       setPlayIdx(null)
       return
     }
-    const a = new Audio(list[i].audio)
+    stopAyah()
+    const a = new Audio(list[j].audio)
     seqRef.current = a
-    setPlayIdx(i)
-    a.onended = () => playFrom(i + 1, list)
+    setPlayIdx(j)
+    a.onended = () => playFrom(j + 1, list)
     a.play().catch(() => setPlayIdx(null))
   }
 
@@ -175,32 +222,58 @@ export default function QuranPage() {
   const openData = openRef ? cache[openRef] : null
 
   useEffect(() => {
-    let alive = true
+    const ctl = new AbortController()
     setThemeLoading(true)
-    Promise.all(theme.refs.map(fetchAyah)).then((results) => {
-      if (!alive) return
-      setAyat(results.filter(Boolean) as Ayah[])
-      setThemeLoading(false)
-    })
-    return () => {
-      alive = false
-    }
-  }, [themeKey, theme.refs])
+    setThemeError(false)
+    Promise.all(theme.refs.map((r) => fetchAyah(r, ctl.signal)))
+      .then((results) => {
+        if (ctl.signal.aborted) return
+        setAyat(results)
+        setThemeLoading(false)
+      })
+      .catch((e) => {
+        if (isAbort(e) || ctl.signal.aborted) return
+        setThemeError(true)
+        setThemeLoading(false)
+      })
+    return () => ctl.abort()
+  }, [themeKey, theme.refs, themeReload])
 
   useEffect(() => {
-    fetch(`${API}/surah`)
-      .then((r) => r.json())
+    const ctl = new AbortController()
+    setSurahsError(false)
+    fetch(`${API}/surah`, { signal: ctl.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`alquran.cloud ${r.status}`)
+        return r.json()
+      })
       .then((j) => setSurahs(j.data || []))
-      .catch(() => {})
-  }, [])
+      .catch((e) => {
+        if (isAbort(e) || ctl.signal.aborted) return
+        setSurahsError(true)
+      })
+    return () => ctl.abort()
+  }, [surahsReload])
 
   const openOne = async (n: number) => {
     const ref = `${surahNo}:${n}`
     setOpenAyah(n)
-    if (cache[ref]) return
+    if (cache[ref]) {
+      pendingAyahRef.current = null
+      setAyahLoading(false)
+      return
+    }
+    pendingAyahRef.current = ref
     setAyahLoading(true)
-    const a = await fetchAyah(ref)
-    if (a) setCache((c) => ({ ...c, [ref]: a }))
+    try {
+      const a = await fetchAyah(ref)
+      setCache((c) => ({ ...c, [ref]: a }))
+    } catch {
+      // the card offers a retry
+    }
+    // A newer tap owns the loading state now.
+    if (pendingAyahRef.current !== ref) return
+    pendingAyahRef.current = null
     setAyahLoading(false)
   }
 
@@ -215,7 +288,11 @@ export default function QuranPage() {
         ).map(([key, label]) => (
           <button
             key={key}
-            onClick={() => setMode(key)}
+            onClick={() => {
+              stopSequence()
+              stopAyah()
+              setMode(key)
+            }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
               mode === key
                 ? 'bg-ink text-bg border-ink'
@@ -280,8 +357,16 @@ export default function QuranPage() {
               </div>
             )}
 
+            {!themeLoading && themeError && (
+              <ErrorRetry
+                className="py-8"
+                onRetry={() => setThemeReload((r) => r + 1)}
+              />
+            )}
+
             <div className="space-y-4">
               {!themeLoading &&
+                !themeError &&
                 ayat.map((a) => (
                   <div
                     key={a.ref}
@@ -321,9 +406,11 @@ export default function QuranPage() {
             <select
               value={surahNo}
               onChange={(e) => {
-                setSurahNo(Number(e.target.value))
+                const n = Number(e.target.value)
+                setSurahNo(n)
                 setOpenAyah(null)
                 stopSequence()
+                if (surahView === 'full') loadFullSurah(n)
               }}
               className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm focus:outline-none focus:border-linestrong"
             >
@@ -343,6 +430,7 @@ export default function QuranPage() {
                   setSurahNo(s.number)
                   setOpenAyah(null)
                   stopSequence()
+                  if (surahView === 'full') loadFullSurah(s.number)
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-3 ${
                   s.number === surahNo
@@ -359,9 +447,15 @@ export default function QuranPage() {
                 </span>
               </button>
             ))}
-            {surahs.length === 0 && (
-              <p className="text-sm text-mute px-3 py-4">Loading surahs…</p>
-            )}
+            {surahs.length === 0 &&
+              (surahsError ? (
+                <ErrorRetry
+                  className="px-3 py-4"
+                  onRetry={() => setSurahsReload((r) => r + 1)}
+                />
+              ) : (
+                <p className="text-sm text-mute px-3 py-4">Loading surahs…</p>
+              ))}
           </div>
 
           <div>
@@ -403,7 +497,7 @@ export default function QuranPage() {
                   Ayah by ayah
                 </button>
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     setSurahView('full')
                     loadFullSurah(surahNo)
                   }}
@@ -419,7 +513,8 @@ export default function QuranPage() {
                   <button
                     onClick={async () => {
                       setSurahView('full')
-                      const list = await loadFullSurah(surahNo)
+                      const { id, list } = await loadFullSurah(surahNo)
+                      if (id !== reqRef.current) return
                       playFrom(0, list)
                     }}
                     className="px-4 py-2 rounded-lg text-sm font-medium bg-ember text-bg hover:opacity-85 transition-opacity"
@@ -533,7 +628,14 @@ export default function QuranPage() {
                     <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto" />
                   </div>
                 )}
+                {!fullLoading && fullError && (
+                  <ErrorRetry
+                    className="py-8"
+                    onRetry={() => loadFullSurah(surahNo)}
+                  />
+                )}
                 {!fullLoading &&
+                  !fullError &&
                   fullAyat.map((a, i) => (
                     <div
                       key={a.n}

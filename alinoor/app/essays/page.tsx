@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/app/components/Navbar'
@@ -23,13 +24,23 @@ type ArticleWithAuthor = Article & {
 
 const PAGE_SIZE = 10
 
-export default function EssaysPage() {
+function EssaysFeed() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [articles, setArticles] = useState<ArticleWithAuthor[]>([])
-  const [page, setPage] = useState(1)
+  // The current page lives in the URL, so Back from an essay and shared links
+  // both land on the page the reader was actually on.
+  const [page, setPage] = useState(() => {
+    const p = Number.parseInt(searchParams.get('page') || '1', 10)
+    return Number.isFinite(p) && p > 0 ? p : 1
+  })
   const [total, setTotal] = useState(0)
   const [listLoading, setListLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retry, setRetry] = useState(0)
+  const [brokenCovers, setBrokenCovers] = useState<Record<string, boolean>>({})
   const listRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -49,51 +60,107 @@ export default function EssaysPage() {
     }
   }, [])
 
+  // `alive` keeps a slower earlier page from overwriting a newer one.
   useEffect(() => {
+    let alive = true
+
     const loadArticles = async () => {
       setListLoading(true)
+      setLoadFailed(false)
       const from = (page - 1) * PAGE_SIZE
 
-      const { data, count } = await supabase
+      const { data, count, error } = await supabase
         .from('articles')
         .select('*', { count: 'exact' })
         .eq('status', 'published')
         .order('created_at', { ascending: false })
         .range(from, from + PAGE_SIZE - 1)
 
+      if (!alive) return
+
+      if (error || !data) {
+        // A ?page= past the end makes PostgREST reject the range outright, and
+        // with no count we'd never learn where to clamp to. Ask for the count
+        // alone and let the clamp effect below move the reader to the last
+        // real page instead of showing a failure.
+        if (page > 1) {
+          const { count: total0, error: countError } = await supabase
+            .from('articles')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'published')
+
+          if (!alive) return
+          if (!countError && total0 !== null && total0 !== undefined) {
+            setTotal(total0)
+            setListLoading(false)
+            return
+          }
+        }
+
+        setArticles([])
+        setLoadFailed(true)
+        setListLoading(false)
+        return
+      }
+
       if (count !== null && count !== undefined) setTotal(count)
 
-      if (data) {
-        const articlesWithAuthors = await Promise.all(
-          data.map(async (article) => {
-            if (article.author_name) return article
-
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('email', article.author_email)
-              .single()
-
-            return {
-              ...article,
-              author_name:
-                profile?.full_name || article.author_email.split('@')[0],
-            }
-          })
+      // One profiles round-trip for the whole page, not one per essay.
+      const emails = Array.from(
+        new Set(
+          data
+            .filter((article) => !article.author_name && article.author_email)
+            .map((article) => article.author_email as string)
         )
-        setArticles(articlesWithAuthors)
+      )
+
+      const names = new Map<string, string>()
+      if (emails.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .in('email', emails)
+
+        if (!alive) return
+
+        profiles?.forEach((profile) => {
+          if (profile.full_name) names.set(profile.email, profile.full_name)
+        })
       }
+
+      setArticles(
+        data.map((article) => ({
+          ...article,
+          author_name:
+            article.author_name ||
+            names.get(article.author_email) ||
+            article.author_email?.split('@')[0] ||
+            'anon',
+        }))
+      )
       setListLoading(false)
     }
 
     loadArticles()
-  }, [page])
+
+    return () => {
+      alive = false
+    }
+  }, [page, retry])
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  // The page number comes from the URL, so it can point past the last page.
+  useEffect(() => {
+    if (total === 0 || page <= pages) return
+    setPage(pages)
+    router.replace(`/essays?page=${pages}`, { scroll: false })
+  }, [total, page, pages, router])
 
   const goTo = (p: number) => {
     if (p < 1 || p > pages || p === page) return
     setPage(p)
+    router.replace(`/essays?page=${p}`, { scroll: false })
     listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -151,7 +218,22 @@ export default function EssaysPage() {
             </span>
           </div>
 
-          {!listLoading && articles.length === 0 && (
+          {!listLoading && loadFailed && (
+            <div className="border border-dashed border-linestrong rounded-xl py-20 text-center">
+              <p className="text-lg text-ink3 mb-1">Couldn&rsquo;t load essays.</p>
+              <p className="font-hand text-2xl text-mute mb-6">
+                the shelf is still there — try again
+              </p>
+              <button
+                onClick={() => setRetry((r) => r + 1)}
+                className="px-5 py-2.5 bg-ink text-bg rounded-lg text-sm font-medium hover:opacity-85 transition-opacity"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!listLoading && !loadFailed && articles.length === 0 && (
             <div className="border border-dashed border-linestrong rounded-xl py-20 text-center">
               <p className="text-lg text-ink3 mb-1">Nothing here yet.</p>
               <p className="font-hand text-2xl text-mute">
@@ -176,11 +258,17 @@ export default function EssaysPage() {
                   style={{ animationDelay: `${index * 60}ms` }}
                 >
                   <article className="h-full bg-panel rounded-xl overflow-hidden border border-line hover:border-linestrong transition-colors shadow-card flex flex-col">
-                    {article.cover_image ? (
+                    {article.cover_image && !brokenCovers[article.id] ? (
                       <div className="relative h-44 overflow-hidden bg-panel2 border-b border-line">
                         <img
                           src={article.cover_image}
                           alt={article.title}
+                          onError={() =>
+                            setBrokenCovers((prev) => ({
+                              ...prev,
+                              [article.id]: true,
+                            }))
+                          }
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         />
                       </div>
@@ -354,5 +442,19 @@ export default function EssaysPage() {
         </footer>
       </div>
     </>
+  )
+}
+
+export default function EssaysPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <EssaysFeed />
+    </Suspense>
   )
 }

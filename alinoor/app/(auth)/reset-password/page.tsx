@@ -22,13 +22,23 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) setHasSession(true)
+    // Only a recovery link puts this page into "set a new password" mode.
+    // Switching on any session meant an already signed-in user could never
+    // reach the send-the-email form at all.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session?.user) setHasSession(true)
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setHasSession(true)
-    })
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const isRecoveryLink =
+      hash.get('type') === 'recovery' ||
+      new URL(window.location.href).searchParams.get('type') === 'recovery'
+
+    if (isRecoveryLink) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) setHasSession(true)
+      })
+    }
 
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -157,7 +167,7 @@ export default function ResetPasswordPage() {
 
               <button
                 type="submit"
-                disabled={loading || sent}
+                disabled={loading}
                 className="w-full bg-ink text-bg py-3 rounded-lg text-sm font-medium hover:opacity-85 transition-opacity disabled:opacity-50 mb-6"
               >
                 {loading ? 'Sending…' : sent ? 'Link sent' : 'Send recovery link'}

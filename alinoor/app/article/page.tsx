@@ -1,8 +1,9 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import DOMPurify from 'dompurify'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/app/components/Navbar'
 
@@ -34,13 +35,27 @@ function ArticleReader() {
   const [liked, setLiked] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
 
+  const articleId = article?.id
+  const userId = user?.id
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
     })
   }, [])
 
+  // The essay depends only on the slug. Keeping `user` out of these deps
+  // matters: it arrives a beat later, and refetching on it used to double every
+  // request and let a transient failure eject a reader mid-essay.
   useEffect(() => {
+    if (!slug) {
+      router.push('/essays')
+      return
+    }
+
+    let alive = true
+    setLoading(true)
+
     const loadArticle = async () => {
       const { data, error } = await supabase
         .from('articles')
@@ -49,68 +64,75 @@ function ArticleReader() {
         .eq('status', 'published')
         .single()
 
+      if (!alive) return
       if (error || !data) {
         router.push('/essays')
         return
       }
 
       setArticle(data)
+      setLoading(false)
 
       // Prefer the explicit byline; fall back to the author's profile.
       if (data.author_name) {
         setAuthorName(data.author_name)
-      } else {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('email', data.author_email)
-          .single()
-
-        if (profileData) {
-          setAuthorName(profileData.full_name)
-        } else {
-          setAuthorName(data.author_email.split('@')[0])
-        }
+        return
       }
 
-      setLoading(false)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('email', data.author_email)
+        .maybeSingle()
 
-      // Increment views
-      if (user) {
-        await supabase.rpc('increment_article_views', { p_article_id: data.id })
-      }
+      if (!alive) return
+      setAuthorName(
+        profileData?.full_name || data.author_email?.split('@')[0] || 'anon'
+      )
+    }
 
-      // Check if liked
-      if (user) {
-        const { data: likeData } = await supabase
+    loadArticle()
+
+    return () => {
+      alive = false
+    }
+  }, [slug, router])
+
+  // Views, likes and bookmarks need both the essay and a signed-in reader.
+  useEffect(() => {
+    if (!articleId || !userId) return
+
+    let alive = true
+
+    const loadReaderState = async () => {
+      await supabase.rpc('increment_article_views', { p_article_id: articleId })
+
+      const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
+        supabase
           .from('article_likes')
           .select('id')
-          .eq('article_id', data.id)
-          .eq('user_id', user.id)
-          .single()
-
-        setLiked(!!likeData)
-      }
-
-      // Check if bookmarked
-      if (user) {
-        const { data: bookmarkData } = await supabase
+          .eq('article_id', articleId)
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
           .from('bookmarks')
           .select('id')
-          .eq('article_id', data.id)
-          .eq('user_id', user.id)
-          .single()
+          .eq('article_id', articleId)
+          .eq('user_id', userId)
+          .maybeSingle(),
+      ])
 
-        setBookmarked(!!bookmarkData)
-      }
+      if (!alive) return
+      setLiked(!!likeData)
+      setBookmarked(!!bookmarkData)
     }
 
-    if (slug) {
-      loadArticle()
-    } else {
-      router.push('/essays')
+    loadReaderState()
+
+    return () => {
+      alive = false
     }
-  }, [slug, user, router])
+  }, [articleId, userId])
 
   const toggleLike = async () => {
     if (!user || !article) {
@@ -149,6 +171,14 @@ function ArticleReader() {
       setBookmarked(true)
     }
   }
+
+  // The imported corpus is HTML, but /write stores whatever the author typed,
+  // so the body is only ever injected after sanitising.
+  const isHtml = !!article && /^\s*</.test(article.content)
+  const safeHtml = useMemo(() => {
+    if (!isHtml || !article || typeof window === 'undefined') return ''
+    return DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } })
+  }, [isHtml, article])
 
   if (loading) {
     return (
@@ -239,10 +269,10 @@ function ArticleReader() {
 
           {/* Content — imported essays are HTML; user-written ones are text */}
           <div className="mb-16">
-            {/^\s*</.test(article.content) ? (
+            {isHtml ? (
               <div
                 className="essay-html text-lg leading-[1.8] text-ink2"
-                dangerouslySetInnerHTML={{ __html: article.content }}
+                dangerouslySetInnerHTML={{ __html: safeHtml }}
               />
             ) : (
               <div className="text-lg leading-[1.8] text-ink2 whitespace-pre-wrap">

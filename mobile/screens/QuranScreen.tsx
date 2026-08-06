@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -66,33 +66,41 @@ export default function QuranScreen() {
     Array<{ n: number; ar: string; en: string; audio: string }>
   >([])
   const [fullLoading, setFullLoading] = useState(false)
+  const [fullFailed, setFullFailed] = useState(false)
   const [fullFor, setFullFor] = useState(0)
   const [playIdx, setPlayIdx] = useState<number | null>(null)
+  const [audioNote, setAudioNote] = useState(false)
+  const audioFails = useRef(0)
 
-  const loadFullSurah = async (n: number) => {
-    if (fullFor === n && fullAyat.length) return fullAyat
-    setFullLoading(true)
-    try {
-      const res = await fetch(
-        `${API}/surah/${n}/editions/quran-uthmani,en.pickthall,ar.alafasy`,
-      )
-      const j = await res.json()
-      const [ar, en, audio] = j.data
-      const list = ar.ayahs.map((a: any, i: number) => ({
-        n: a.numberInSurah,
-        ar: a.text,
-        en: en.ayahs[i]?.text || '',
-        audio: audio.ayahs[i]?.audio || '',
-      }))
-      setFullAyat(list)
-      setFullFor(n)
-      setFullLoading(false)
-      return list
-    } catch {
-      setFullLoading(false)
-      return []
-    }
-  }
+  const loadFullSurah = useCallback(
+    async (n: number) => {
+      if (fullFor === n && fullAyat.length) return fullAyat
+      setFullLoading(true)
+      setFullFailed(false)
+      try {
+        const res = await fetch(
+          `${API}/surah/${n}/editions/quran-uthmani,en.pickthall,ar.alafasy`,
+        )
+        const j = await res.json()
+        const [ar, en, audio] = j.data
+        const list = ar.ayahs.map((a: any, i: number) => ({
+          n: a.numberInSurah,
+          ar: a.text,
+          en: en.ayahs[i]?.text || '',
+          audio: audio.ayahs[i]?.audio || '',
+        }))
+        setFullAyat(list)
+        setFullFor(n)
+        setFullLoading(false)
+        return list
+      } catch {
+        setFullLoading(false)
+        setFullFailed(true)
+        return []
+      }
+    },
+    [fullFor, fullAyat],
+  )
 
   const theme = QURAN_THEMES.find(t => t.key === themeKey)!
   const surah = surahs.find(x => x.number === surahNo)
@@ -118,6 +126,12 @@ export default function QuranScreen() {
       .catch(() => {})
   }, [])
 
+  // Changing surah while the whole-surah view is open must reload it —
+  // otherwise the previous surah's text sits under the new one's numbers.
+  useEffect(() => {
+    if (surahView === 'full' && fullFor !== surahNo) loadFullSurah(surahNo)
+  }, [surahView, surahNo, fullFor, loadFullSurah])
+
   const openOne = async (n: number) => {
     const ref = `${surahNo}:${n}`
     setOpenAyah(n)
@@ -141,7 +155,10 @@ export default function QuranScreen() {
           <TouchableOpacity
             key={key}
             style={[s.modeBtn, mode === key && s.modeBtnActive]}
-            onPress={() => setMode(key)}>
+            onPress={() => {
+              setMode(key)
+              setPlayIdx(null)
+            }}>
             <Text style={[s.modeText, mode === key && s.modeTextActive]}>
               {label}
             </Text>
@@ -224,10 +241,7 @@ export default function QuranScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.viewBtn, surahView === 'full' && s.viewBtnActive]}
-                onPress={() => {
-                  setSurahView('full')
-                  loadFullSurah(surahNo)
-                }}>
+                onPress={() => setSurahView('full')}>
                 <Text
                   style={[
                     s.viewBtnText,
@@ -241,6 +255,8 @@ export default function QuranScreen() {
                   style={s.listenBtn}
                   onPress={async () => {
                     setSurahView('full')
+                    setAudioNote(false)
+                    audioFails.current = 0
                     const list = await loadFullSurah(surahNo)
                     if (list.length) setPlayIdx(0)
                   }}>
@@ -256,6 +272,12 @@ export default function QuranScreen() {
                 </TouchableOpacity>
               )}
             </View>
+          )}
+
+          {audioNote && (
+            <Text style={s.blurb}>
+              Recitation audio isn’t reachable right now — the text still reads.
+            </Text>
           )}
 
           {surahView === 'byayah' && (
@@ -327,13 +349,22 @@ export default function QuranScreen() {
           {/* Whole-surah reader with follow-along highlight */}
           {surahView === 'full' && (
             <View>
-              {fullLoading && (
-                <ActivityIndicator
-                  color={T.ink}
-                  style={{ marginVertical: 30 }}
-                />
+              {fullFailed && fullFor !== surahNo ? (
+                <TouchableOpacity onPress={() => loadFullSurah(surahNo)}>
+                  <Text style={s.blurb}>
+                    Couldn’t load this surah — tap to retry.
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                (fullLoading || fullFor !== surahNo) && (
+                  <ActivityIndicator
+                    color={T.ink}
+                    style={{ marginVertical: 30 }}
+                  />
+                )
               )}
               {!fullLoading &&
+                fullFor === surahNo &&
                 fullAyat.map((a, i) => (
                   <View
                     key={a.n}
@@ -344,9 +375,11 @@ export default function QuranScreen() {
                       </Text>
                       <TouchableOpacity
                         style={s.navBtn}
-                        onPress={() =>
+                        onPress={() => {
+                          setAudioNote(false)
+                          audioFails.current = 0
                           setPlayIdx(playIdx === i ? null : i)
-                        }>
+                        }}>
                         <Text style={s.navBtnText}>
                           {playIdx === i ? '◼' : '▶'}
                         </Text>
@@ -370,15 +403,30 @@ export default function QuranScreen() {
           source={{ uri: fullAyat[playIdx].audio }}
           style={{ width: 0, height: 0 }}
           paused={false}
-          onEnd={() =>
+          onEnd={() => {
+            audioFails.current = 0
             setPlayIdx(playIdx + 1 < fullAyat.length ? playIdx + 1 : null)
-          }
-          onError={() => setPlayIdx(null)}
+          }}
+          onError={() => {
+            // One dead CDN file must not end the recitation; a run of them
+            // means the audio itself is unreachable.
+            audioFails.current += 1
+            if (audioFails.current >= 3) {
+              audioFails.current = 0
+              setAudioNote(true)
+              setPlayIdx(null)
+              return
+            }
+            setPlayIdx(playIdx + 1 < fullAyat.length ? playIdx + 1 : null)
+          }}
         />
       ) : null}
 
       {/* surah picker */}
-      <Modal visible={pickSurah} animationType="slide">
+      <Modal
+        visible={pickSurah}
+        animationType="slide"
+        onRequestClose={() => setPickSurah(false)}>
         <View style={s.pickerWrap}>
           <View style={s.pickerHead}>
             <Text style={s.pickerTitle}>Choose a surah</Text>
@@ -396,6 +444,7 @@ export default function QuranScreen() {
                   setSurahNo(item.number)
                   setOpenAyah(null)
                   setPlayIdx(null)
+                  setAudioNote(false)
                   setPickSurah(false)
                 }}>
                 <Text style={s.pickerNum}>{item.number}</Text>

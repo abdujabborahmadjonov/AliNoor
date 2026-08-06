@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { signOutAndClear } from '@/lib/store'
 
 export default function UserMenu() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function UserMenu() {
   if (!user) return null
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await signOutAndClear()
     setOpen(false)
     router.push('/')
     router.refresh()
@@ -100,7 +101,7 @@ export default function UserMenu() {
               </Link>
 
               <Link
-                href="/drafts"
+                href="/my-articles"
                 className="flex items-center gap-3 px-6 py-3 text-black hover:bg-gray-100 transition-colors group"
                 onClick={() => setOpen(false)}
               >

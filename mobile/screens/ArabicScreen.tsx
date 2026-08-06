@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
@@ -13,17 +13,33 @@ import { T } from '../lib/theme'
 export default function ArabicScreen({ userId }: { userId: string | null }) {
   const [groupKey, setGroupKey] = useState(ARABIC_GROUPS[0].key)
   const [starred, setStarred] = useState<Record<string, boolean>>({})
+  const [loadFailed, setLoadFailed] = useState(false)
+  const alive = useRef(true)
+
+  const load = useCallback(async () => {
+    if (!userId) return
+    const st = await loadKey<Record<string, boolean>>(
+      userId,
+      'alinoor_arabic_stars',
+      {},
+    )
+    if (!alive.current) return
+    setLoadFailed(st.failed)
+    if (!st.failed) setStarred(st.value)
+  }, [userId])
 
   useEffect(() => {
-    if (!userId) return
-    loadKey<Record<string, boolean>>(userId, 'alinoor_arabic_stars', {}).then(
-      setStarred,
-    )
-  }, [userId])
+    alive.current = true
+    load()
+    return () => {
+      alive.current = false
+    }
+  }, [load])
 
   const group = ARABIC_GROUPS.find(g => g.key === groupKey)!
 
   const toggleStar = (ar: string) => {
+    if (loadFailed) return
     const next = { ...starred, [ar]: !starred[ar] }
     if (!next[ar]) delete next[ar]
     setStarred(next)
@@ -48,24 +64,34 @@ export default function ArabicScreen({ userId }: { userId: string | null }) {
         ))}
       </ScrollView>
 
-      <Text style={s.blurb}>
-        starter Qur’anic vocabulary · ★ {Object.keys(starred).length} starred
-      </Text>
+      {loadFailed ? (
+        <TouchableOpacity style={s.retry} onPress={load}>
+          <Text style={s.retryText}>
+            Couldn’t load your stars — tap to retry
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={s.blurb}>
+          starter Qur’anic vocabulary · ★ {Object.keys(starred).length} starred
+        </Text>
+      )}
 
       <View style={s.grid}>
         {group.words.map(w => (
           <View key={w.ar} style={s.card}>
-            <TouchableOpacity
-              style={s.star}
-              onPress={() => toggleStar(w.ar)}>
-              <Text
-                style={{
-                  fontSize: 15,
-                  color: starred[w.ar] ? T.warn : T.faint,
-                }}>
-                ★
-              </Text>
-            </TouchableOpacity>
+            {!loadFailed && (
+              <TouchableOpacity
+                style={s.star}
+                onPress={() => toggleStar(w.ar)}>
+                <Text
+                  style={{
+                    fontSize: 15,
+                    color: starred[w.ar] ? T.warn : T.faint,
+                  }}>
+                  ★
+                </Text>
+              </TouchableOpacity>
+            )}
             <Text style={s.arabic}>{w.ar}</Text>
             <Text style={s.tr}>{w.tr}</Text>
             <Text style={s.en}>{w.en}</Text>
@@ -92,6 +118,15 @@ const s = StyleSheet.create({
   chipText: { fontSize: 12, color: T.ink2 },
   chipTextActive: { color: T.bg, fontWeight: '600' },
   blurb: { fontSize: 12, color: T.mute, marginTop: 12 },
+  retry: {
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 12,
+  },
+  retryText: { fontSize: 12, color: T.ember },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

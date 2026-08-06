@@ -21,29 +21,49 @@ type ArticleWithAuthor = Article & {
   author_name: string
 }
 
+// PostgREST reads , ( ) . as filter grammar and % _ * as LIKE wildcards, so a
+// term like "salat, dua" would build a malformed filter unless they are dropped.
+const sanitizeTerm = (raw: string) =>
+  raw
+    .replace(/[,()."'\\%_*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
   const [articles, setArticles] = useState<ArticleWithAuthor[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const searchArticles = async () => {
-      if (!query.trim()) {
+      const term = sanitizeTerm(query)
+
+      if (!term) {
         setArticles([])
+        setFailed(false)
         setLoading(false)
         return
       }
 
       setLoading(true)
+      setFailed(false)
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('articles')
         .select('id, title, slug, excerpt, topic, author_email, author_name, created_at, views_count')
         .eq('status', 'published')
-        .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
+        .or(`title.ilike.%${term}%,excerpt.ilike.%${term}%,content.ilike.%${term}%`)
         .order('created_at', { ascending: false })
         .limit(20)
+
+      if (error || !data) {
+        setArticles([])
+        setFailed(true)
+        setLoading(false)
+        return
+      }
 
       if (data) {
         // Explicit byline wins; only look up a profile when absent.
@@ -59,7 +79,10 @@ function SearchResults() {
 
             return {
               ...article,
-              author_name: profile?.full_name || article.author_email.split('@')[0]
+              author_name:
+                profile?.full_name ||
+                article.author_email?.split('@')[0] ||
+                'anon'
             }
           })
         )
@@ -106,7 +129,16 @@ function SearchResults() {
             </div>
           )}
 
-          {!loading && query && articles.length === 0 && (
+          {!loading && failed && (
+            <div className="border border-dashed border-linestrong rounded-xl py-16 text-center">
+              <p className="text-lg text-ink3 mb-1">Search failed.</p>
+              <p className="font-hand text-2xl text-mute">
+                something went wrong — try again
+              </p>
+            </div>
+          )}
+
+          {!loading && !failed && query && articles.length === 0 && (
             <div className="border border-dashed border-linestrong rounded-xl py-16 text-center">
               <p className="text-lg text-ink3 mb-1">No essays found.</p>
               <p className="font-hand text-2xl text-mute">

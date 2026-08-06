@@ -11,12 +11,12 @@ import {
   fmtTime,
   maghribDay,
   minutesInTz,
+  planningDay,
   timesFor,
 } from '@/lib/prayer'
 import {
   AppSettings,
   Task,
-  dateInTz,
   loadSettings,
   loadTasks,
   saveTasks,
@@ -26,16 +26,15 @@ import {
 // Month calendar (Monday-first): today filled, selected ringed, any day
 // tappable to plan that day.
 function MonthCalendar({
-  tz,
+  todayYmd,
   selected,
   onSelect,
 }: {
-  tz: string
+  todayYmd: string
   selected: string
   onSelect: (ymd: string) => void
 }) {
   const [offset, setOffset] = useState(0)
-  const todayYmd = dateInTz(tz)
   const [ty, tm] = todayYmd.split('-').map(Number)
 
   const first = new Date(Date.UTC(ty, tm - 1 + offset, 1))
@@ -119,18 +118,30 @@ function PageInner() {
     return () => clearInterval(t)
   }, [])
 
-  const todayYmd = settings ? dateInTz(findCity(settings.city).tz, now) : ''
+  // Keyed to the Maghrib-to-Maghrib window, not the civil date: a task added
+  // after Maghrib belongs to the Islamic day that has already begun, and
+  // keying it to the civil date made it vanish at midnight.
+  const todayYmd = settings ? planningDay(settings, now) : ''
   const viewYmd = selectedYmd || todayYmd
   const isToday = viewYmd === todayYmd
 
   // Prayer times for the viewed day: local noon of that date anchors the
   // Maghrib-to-Maghrib window when browsing other days.
-  const day = useMemo(() => {
-    if (!settings) return null
-    if (isToday || !viewYmd) return maghribDay(settings, now)
+  const anchor = useMemo(() => {
+    if (isToday || !viewYmd) return now
     const [y, m, d] = viewYmd.split('-').map(Number)
-    return maghribDay(settings, new Date(y, m - 1, d, 12, 0, 0))
-  }, [settings, now, viewYmd, isToday])
+    return new Date(y, m - 1, d, 12, 0, 0)
+  }, [isToday, viewYmd, now])
+
+  const day = useMemo(
+    () => (settings ? maghribDay(settings, anchor) : null),
+    [settings, anchor]
+  )
+
+  const ringTimes = useMemo(
+    () => (settings ? timesFor(settings, anchor) : null),
+    [settings, anchor]
+  )
 
   if (!settings || !day) {
     return (
@@ -299,19 +310,27 @@ function PageInner() {
         <div className="space-y-5">
           <div className="bg-panel border border-line rounded-xl p-5 shadow-card">
             <p className="microlabel mb-2">
-              now · <span className="text-ink2">{day.current.name}</span>
+              {isToday ? (
+                <>
+                  now · <span className="text-ink2">{day.current.name}</span>
+                </>
+              ) : (
+                'planned day'
+              )}
             </p>
+            {/* Off today the ring is anchored to the viewed day's noon, so the
+                dial and its countdown describe that day rather than right now. */}
             <PrayerRing
-              times={timesFor(settings, now)}
+              times={ringTimes ?? []}
               city={city}
-              now={now}
+              now={anchor}
               next={day.next}
             />
           </div>
 
           <div className="bg-panel border border-line rounded-xl p-5 shadow-card">
             <MonthCalendar
-              tz={city.tz}
+              todayYmd={todayYmd}
               selected={viewYmd}
               onSelect={(ymd) => setSelectedYmd(ymd === todayYmd ? '' : ymd)}
             />
@@ -321,7 +340,9 @@ function PageInner() {
           </div>
 
           <div className="bg-panel border border-line rounded-xl p-6 shadow-card">
-            <p className="microlabel mb-3">today&apos;s progress</p>
+            <p className="microlabel mb-3">
+              {isToday ? "today's progress" : "that day's progress"}
+            </p>
             <p className="text-sm text-ink3">
               {dayTasks.filter((t) => t.done).length} of {dayTasks.length} tasks
               done

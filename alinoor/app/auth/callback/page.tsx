@@ -11,6 +11,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let finished = false
+    let cancelled = false
     let unsubscribe: (() => void) | undefined
     let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -33,10 +34,16 @@ export default function AuthCallback() {
     const run = async () => {
       const url = new URL(window.location.href)
 
-      // Supabase reports OAuth failures via query params — surface them
-      // instead of silently bouncing to /login.
+      // Supabase reports OAuth failures via query params under the PKCE flow
+      // but in the URL hash under the implicit flow, so check both — reading
+      // only the query left a failed consent screen bouncing to /login with
+      // no explanation at all.
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
       const errorDescription =
-        url.searchParams.get('error_description') || url.searchParams.get('error')
+        url.searchParams.get('error_description') ||
+        url.searchParams.get('error') ||
+        hash.get('error_description') ||
+        hash.get('error')
       if (errorDescription) {
         setError(errorDescription)
         return
@@ -59,6 +66,9 @@ export default function AuthCallback() {
 
       // Implicit flow: the session arrives in the URL hash and supabase-js
       // stores it asynchronously — subscribe rather than reading it once.
+      // The awaits above mean this can be reached after unmount, when cleanup
+      // has already run and would never see this subscription.
+      if (cancelled) return
       const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) finish(session.user.id)
       })
@@ -77,7 +87,7 @@ export default function AuthCallback() {
         if (late?.user) {
           await finish(late.user.id)
         } else {
-          router.replace('/login')
+          setError('Sign-in timed out before we heard back from the provider.')
         }
       }, 5000)
     }

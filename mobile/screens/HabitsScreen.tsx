@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   RefreshControl,
   ScrollView,
@@ -62,20 +62,32 @@ export default function HabitsScreen({ userId }: { userId: string }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category>('spiritual')
   const [refreshing, setRefreshing] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const alive = useRef(true)
 
   const load = useCallback(async () => {
-    const [s, h, l] = await Promise.all([
+    const [st, h, l] = await Promise.all([
       loadKey<AppSettings>(userId, 'alinoor_settings', DEFAULT_SETTINGS),
       loadKey<Habit[]>(userId, 'alinoor_habits', []),
       loadKey<HabitLogs>(userId, 'alinoor_habit_logs', {}),
     ])
-    setToday(dateInTz(findCity(s.city || 'Tashkent').tz))
-    setHabits(h)
-    setLogs(l)
+    if (!alive.current) return
+    if (st.failed || h.failed || l.failed) {
+      setLoadFailed(true)
+      return
+    }
+    setLoadFailed(false)
+    setToday(dateInTz(findCity(st.value.city || 'Tashkent').tz))
+    setHabits(h.value)
+    setLogs(l.value)
   }, [userId])
 
   useEffect(() => {
+    alive.current = true
     load()
+    return () => {
+      alive.current = false
+    }
   }, [load])
 
   const days = useMemo(() => {
@@ -86,10 +98,12 @@ export default function HabitsScreen({ userId }: { userId: string }) {
   }, [today])
 
   const persistHabits = (next: Habit[]) => {
+    if (loadFailed) return
     setHabits(next)
     saveKey(userId, 'alinoor_habits', next)
   }
   const persistLogs = (next: HabitLogs) => {
+    if (loadFailed) return
     setLogs(next)
     saveKey(userId, 'alinoor_habit_logs', next)
   }
@@ -123,6 +137,21 @@ export default function HabitsScreen({ userId }: { userId: string }) {
     return n
   }
 
+  if (loadFailed) {
+    return (
+      <View style={s.failWrap}>
+        <Text style={s.failTitle}>Couldn’t reach your data</Text>
+        <Text style={s.failText}>
+          Your habits didn’t load, so nothing is shown yet — that way nothing
+          already saved gets overwritten.
+        </Text>
+        <TouchableOpacity style={s.retryBtn} onPress={load}>
+          <Text style={s.retryBtnText}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <ScrollView
       style={s.wrap}
@@ -132,7 +161,7 @@ export default function HabitsScreen({ userId }: { userId: string }) {
           onRefresh={async () => {
             setRefreshing(true)
             await load()
-            setRefreshing(false)
+            if (alive.current) setRefreshing(false)
           }}
         />
       }>
@@ -331,4 +360,27 @@ const s = StyleSheet.create({
   },
   cellToday: { borderWidth: 1.5, borderColor: T.ember },
   gridHint: { fontSize: 10, color: T.faint, marginTop: 10 },
+  failWrap: {
+    flex: 1,
+    backgroundColor: T.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 34,
+  },
+  failTitle: { fontSize: 16, fontWeight: '600', color: T.ink },
+  failText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: T.ink3,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  retryBtn: {
+    backgroundColor: T.ink,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    marginTop: 18,
+  },
+  retryBtnText: { color: T.bg, fontSize: 14, fontWeight: '600' },
 })

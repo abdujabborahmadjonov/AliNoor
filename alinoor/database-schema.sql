@@ -1,6 +1,21 @@
 -- =====================================================
 -- COMPLETE DATABASE SCHEMA FOR ALINOOR PLATFORM
 -- =====================================================
+--
+-- WARNING — this file has drifted from the live project. The running database
+-- differs in ways the app code depends on, so do not treat the statements
+-- below as the source of truth for the deployed environment:
+--
+--   * articles.status uses 'published', not 'approved' (and the select policy
+--     and every query in app/ filter on 'published')
+--   * the counter columns are views_count / likes_count, not views / likes
+--   * articles has an author_name column (the byline shown on essays)
+--   * profiles has phone and age columns — the profile-completeness gate in
+--     app/(auth)/login and app/(auth)/complete-profile requires both
+--   * inserting an article requires author_id = auth.uid()
+--
+-- Section 8 below matches live and is required: without user_data every
+-- cross-device sync silently no-ops.
 
 -- =====================================================
 -- 1. PROFILES TABLE (USER INFORMATION)
@@ -242,3 +257,40 @@ create trigger set_profile_updated_at
   before update on public.profiles
   for each row
   execute function public.handle_updated_at();
+
+-- =====================================================
+-- 8. USER_DATA TABLE (CROSS-DEVICE SYNC)
+-- =====================================================
+-- One JSON blob per key per user, mirroring the localStorage keys the planner
+-- writes: alinoor_settings, alinoor_tasks, alinoor_habits, alinoor_habit_logs,
+-- alinoor_books, alinoor_arabic_stars.
+--
+-- The composite primary key is load-bearing: lib/store.ts upserts with
+-- onConflict 'user_id,key', and a surrogate id here would make every save
+-- append a new row instead of updating the existing one.
+create table if not exists public.user_data (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  key text not null,
+  value jsonb not null,
+  updated_at timestamptz default now(),
+  primary key (user_id, key)
+);
+
+alter table public.user_data enable row level security;
+
+create policy "Users can read their own data"
+  on public.user_data for select
+  using (auth.uid() = user_id);
+
+create policy "Users can write their own data"
+  on public.user_data for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own data"
+  on public.user_data for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own data"
+  on public.user_data for delete
+  using (auth.uid() = user_id);

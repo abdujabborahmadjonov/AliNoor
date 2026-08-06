@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   RefreshControl,
   ScrollView,
@@ -109,20 +109,32 @@ export default function TodayScreen({ userId }: { userId: string }) {
   const [draft, setDraft] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [selectedYmd, setSelectedYmd] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+  const alive = useRef(true)
 
   const load = useCallback(async () => {
     const [st, t] = await Promise.all([
       loadKey<AppSettings>(userId, 'alinoor_settings', DEFAULT_SETTINGS),
       loadKey<Task[]>(userId, 'alinoor_tasks', []),
     ])
-    setSettings({ ...DEFAULT_SETTINGS, ...st })
-    setTasks(t)
+    if (!alive.current) return
+    if (st.failed || t.failed) {
+      setLoadFailed(true)
+      return
+    }
+    setLoadFailed(false)
+    setSettings({ ...DEFAULT_SETTINGS, ...st.value })
+    setTasks(t.value)
   }, [userId])
 
   useEffect(() => {
+    alive.current = true
     load()
     const t = setInterval(() => setNow(new Date()), 30_000)
-    return () => clearInterval(t)
+    return () => {
+      alive.current = false
+      clearInterval(t)
+    }
   }, [load])
 
   const city = findCity(settings.city)
@@ -143,6 +155,7 @@ export default function TodayScreen({ userId }: { userId: string }) {
   const doneCount = dayTasks.filter(t => t.done).length
 
   const persist = (next: Task[]) => {
+    if (loadFailed) return
     setTasks(next)
     saveKey(userId, 'alinoor_tasks', next)
   }
@@ -178,6 +191,21 @@ export default function TodayScreen({ userId }: { userId: string }) {
       .toUpperCase()
   } catch {}
 
+  if (loadFailed) {
+    return (
+      <View style={s.failWrap}>
+        <Text style={s.failTitle}>Couldn’t reach your data</Text>
+        <Text style={s.failText}>
+          Your tasks and settings didn’t load, so nothing is shown yet — that
+          way nothing already saved gets overwritten.
+        </Text>
+        <TouchableOpacity style={s.retryBtn} onPress={load}>
+          <Text style={s.retryBtnText}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <ScrollView
       style={s.wrap}
@@ -187,7 +215,7 @@ export default function TodayScreen({ userId }: { userId: string }) {
           onRefresh={async () => {
             setRefreshing(true)
             await load()
-            setRefreshing(false)
+            if (alive.current) setRefreshing(false)
           }}
         />
       }>
@@ -493,4 +521,27 @@ const s = StyleSheet.create({
   calHint: { fontSize: 10, color: T.faint, marginTop: 8 },
   progressText: { fontSize: 14, color: T.ink3, marginTop: 8 },
   hand: { fontSize: 17, fontStyle: 'italic', color: T.mute, marginTop: 10 },
+  failWrap: {
+    flex: 1,
+    backgroundColor: T.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 34,
+  },
+  failTitle: { fontSize: 16, fontWeight: '600', color: T.ink },
+  failText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: T.ink3,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  retryBtn: {
+    backgroundColor: T.ink,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    marginTop: 18,
+  },
+  retryBtnText: { color: T.bg, fontSize: 14, fontWeight: '600' },
 })

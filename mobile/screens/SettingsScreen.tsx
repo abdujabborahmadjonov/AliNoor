@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
@@ -12,8 +12,8 @@ import {
   DEFAULT_SETTINGS,
   loadKey,
   saveKey,
+  signOutAndClear,
 } from '../lib/store'
-import { supabase } from '../lib/supabase'
 import { T } from '../lib/theme'
 
 const METHODS: Array<[AppSettings['method'], string]> = [
@@ -33,14 +33,32 @@ export default function SettingsScreen({
 }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [pickCity, setPickCity] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const alive = useRef(true)
 
-  useEffect(() => {
-    loadKey<AppSettings>(userId, 'alinoor_settings', DEFAULT_SETTINGS).then(s =>
-      setSettings({ ...DEFAULT_SETTINGS, ...s }),
+  const load = useCallback(async () => {
+    const st = await loadKey<AppSettings>(
+      userId,
+      'alinoor_settings',
+      DEFAULT_SETTINGS,
     )
+    if (!alive.current) return
+    setLoadFailed(st.failed)
+    if (!st.failed) setSettings({ ...DEFAULT_SETTINGS, ...st.value })
   }, [userId])
 
+  useEffect(() => {
+    alive.current = true
+    load()
+    return () => {
+      alive.current = false
+    }
+  }, [load])
+
   const update = (patch: Partial<AppSettings>) => {
+    // Writing defaults on top of an unread row would reset the city everywhere.
+    if (loadFailed) return
     const next = { ...settings, ...patch }
     setSettings(next)
     saveKey(userId, 'alinoor_settings', next)
@@ -53,6 +71,21 @@ export default function SettingsScreen({
         <Text style={s.mono}>{email}</Text>
       </View>
 
+      {loadFailed && (
+        <View style={s.card}>
+          <Text style={s.heading}>SETTINGS UNAVAILABLE</Text>
+          <Text style={s.failText}>
+            Your settings didn’t load, so they aren’t shown — changing them now
+            would overwrite what’s already saved.
+          </Text>
+          <TouchableOpacity style={s.retryBtn} onPress={load}>
+            <Text style={s.retryBtnText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {!loadFailed && (
+        <>
       <View style={s.card}>
         <Text style={s.heading}>CITY</Text>
         <TouchableOpacity style={s.select} onPress={() => setPickCity(!pickCity)}>
@@ -121,11 +154,20 @@ export default function SettingsScreen({
         </View>
         <Text style={s.note}>affects Asr time</Text>
       </View>
+        </>
+      )}
 
       <TouchableOpacity
         style={s.signOut}
-        onPress={() => supabase.auth.signOut()}>
-        <Text style={s.signOutText}>Log out</Text>
+        disabled={signingOut}
+        onPress={async () => {
+          setSigningOut(true)
+          await signOutAndClear()
+          if (alive.current) setSigningOut(false)
+        }}>
+        <Text style={s.signOutText}>
+          {signingOut ? 'Logging out…' : 'Log out'}
+        </Text>
       </TouchableOpacity>
       <Text style={s.footer}>nūr — light, the kind you read by</Text>
       <View style={{ height: 40 }} />
@@ -177,6 +219,15 @@ const s = StyleSheet.create({
   pillText: { fontSize: 13, color: T.ink2 },
   pillTextActive: { color: T.bg, fontWeight: '600' },
   note: { fontSize: 13, fontStyle: 'italic', color: T.warn, marginTop: 10 },
+  failText: { fontSize: 13, lineHeight: 20, color: T.ink3 },
+  retryBtn: {
+    backgroundColor: T.ink,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  retryBtnText: { color: T.bg, fontSize: 14, fontWeight: '600' },
   signOut: {
     marginTop: 20,
     borderWidth: 1,
