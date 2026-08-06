@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import SessionSync from "@/app/components/SessionSync";
 
 export const metadata: Metadata = {
   title: "AliNoor — a home for thoughtful writing",
@@ -38,7 +39,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPLY_THEME }} />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <SessionSync />
+        {children}
+      </body>
     </html>
   );
 }

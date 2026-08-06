@@ -93,9 +93,30 @@ export const onSyncStatus = (fn: (failed: boolean) => void) => {
   }
 }
 
+// When this device last changed each key, so hydrating can tell a local edit
+// that hasn't been uploaded yet from a stale copy that should be replaced.
+const stampKey = (key: string) => `${key}__at`
+
+const localStamp = (key: string): string | null => {
+  try {
+    return window.localStorage.getItem(stampKey(key))
+  } catch {
+    return null
+  }
+}
+
+const setLocalStamp = (key: string, at: string) => {
+  try {
+    window.localStorage.setItem(stampKey(key), at)
+  } catch {}
+}
+
 export const clearLocalData = () => {
   try {
-    for (const key of SYNC_KEYS) window.localStorage.removeItem(key)
+    for (const key of SYNC_KEYS) {
+      window.localStorage.removeItem(key)
+      window.localStorage.removeItem(stampKey(key))
+    }
     window.localStorage.removeItem(OWNER_KEY)
   } catch {}
 }
@@ -132,7 +153,7 @@ export const cloudHydrate = async (userId: string): Promise<{ ok: boolean }> => 
 
   const { data, error } = await supabase
     .from('user_data')
-    .select('key, value')
+    .select('key, value, updated_at')
     .eq('user_id', userId)
 
   // Treat an unreadable cloud as unknown, never as empty — carrying on here
@@ -142,26 +163,48 @@ export const cloudHydrate = async (userId: string): Promise<{ ok: boolean }> => 
     return { ok: false }
   }
 
-  const cloudKeys = new Set((data || []).map((r) => r.key))
-  for (const row of data || []) {
-    try {
-      window.localStorage.setItem(row.key, JSON.stringify(row.value))
-    } catch {}
+  const mayUpload = inherited || previousOwner === userId
+  const cloudRows = new Map(
+    (data || []).map((r) => [r.key as string, r as { value: unknown; updated_at: string | null }])
+  )
+
+  const upload = async (key: string, value: unknown) => {
+    const at = new Date().toISOString()
+    const { error: upErr } = await supabase
+      .from('user_data')
+      .upsert(
+        { user_id: userId, key, value, updated_at: at },
+        { onConflict: 'user_id,key' }
+      )
+    if (upErr) setSyncError(true)
+    else setLocalStamp(key, at)
   }
 
-  if (inherited || previousOwner === userId) {
-    for (const key of SYNC_KEYS) {
-      if (cloudKeys.has(key)) continue
-      const raw = window.localStorage.getItem(key)
-      if (!raw) continue
-      const { error: upErr } = await supabase
-        .from('user_data')
-        .upsert(
-          { user_id: userId, key, value: JSON.parse(raw) },
-          { onConflict: 'user_id,key' }
-        )
-      if (upErr) setSyncError(true)
+  for (const key of SYNC_KEYS) {
+    const row = cloudRows.get(key)
+    const raw = window.localStorage.getItem(key)
+
+    if (!row) {
+      if (mayUpload && raw) await upload(key, JSON.parse(raw))
+      continue
     }
+
+    // An edit made on this device before the cloud copy was read — starring a
+    // word on /arabic during boot, say — is newer than what we just fetched,
+    // so keep it and push it up rather than overwriting it with the old copy.
+    // Compared as instants, not strings: Postgres renders timestamptz with a
+    // +00:00 offset while toISOString() emits Z, so they don't sort together.
+    const mine = Date.parse(localStamp(key) || '')
+    const theirs = Date.parse(row.updated_at || '')
+    if (mayUpload && raw && mine > theirs) {
+      await upload(key, JSON.parse(raw))
+      continue
+    }
+
+    try {
+      window.localStorage.setItem(key, JSON.stringify(row.value))
+      if (row.updated_at) setLocalStamp(key, row.updated_at)
+    } catch {}
   }
 
   try {
@@ -186,6 +229,9 @@ const write = (key: string, value: unknown) => {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch {}
+  const at = new Date().toISOString()
+  setLocalStamp(key, at)
+
   if (cloudUser) {
     supabase
       .from('user_data')
@@ -194,7 +240,7 @@ const write = (key: string, value: unknown) => {
           user_id: cloudUser,
           key,
           value,
-          updated_at: new Date().toISOString(),
+          updated_at: at,
         },
         { onConflict: 'user_id,key' }
       )
