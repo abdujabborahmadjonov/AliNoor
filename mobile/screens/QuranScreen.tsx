@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import Video from 'react-native-video'
 import { QURAN_THEMES } from '../lib/content'
 import { T } from '../lib/theme'
 
@@ -58,6 +59,40 @@ export default function QuranScreen() {
   const [openAyah, setOpenAyah] = useState<number | null>(null)
   const [cache, setCache] = useState<Record<string, Ayah>>({})
   const [ayahLoading, setAyahLoading] = useState(false)
+
+  // Whole-surah reading + continuous Alafasy playback
+  const [surahView, setSurahView] = useState<'byayah' | 'full'>('byayah')
+  const [fullAyat, setFullAyat] = useState<
+    Array<{ n: number; ar: string; en: string; audio: string }>
+  >([])
+  const [fullLoading, setFullLoading] = useState(false)
+  const [fullFor, setFullFor] = useState(0)
+  const [playIdx, setPlayIdx] = useState<number | null>(null)
+
+  const loadFullSurah = async (n: number) => {
+    if (fullFor === n && fullAyat.length) return fullAyat
+    setFullLoading(true)
+    try {
+      const res = await fetch(
+        `${API}/surah/${n}/editions/quran-uthmani,en.pickthall,ar.alafasy`,
+      )
+      const j = await res.json()
+      const [ar, en, audio] = j.data
+      const list = ar.ayahs.map((a: any, i: number) => ({
+        n: a.numberInSurah,
+        ar: a.text,
+        en: en.ayahs[i]?.text || '',
+        audio: audio.ayahs[i]?.audio || '',
+      }))
+      setFullAyat(list)
+      setFullFor(n)
+      setFullLoading(false)
+      return list
+    } catch {
+      setFullLoading(false)
+      return []
+    }
+  }
 
   const theme = QURAN_THEMES.find(t => t.key === themeKey)!
   const surah = surahs.find(x => x.number === surahNo)
@@ -166,11 +201,65 @@ export default function QuranScreen() {
 
           {surah && (
             <Text style={s.blurb}>
-              {surah.englishNameTranslation} · {surah.revelationType} — tap an
-              ayah number, only that ayah is loaded
+              {surah.englishNameTranslation} · {surah.revelationType}
             </Text>
           )}
 
+          {/* Reading mode: tap-an-ayah, whole surah, listen */}
+          {surah && (
+            <View style={s.viewRow}>
+              <TouchableOpacity
+                style={[s.viewBtn, surahView === 'byayah' && s.viewBtnActive]}
+                onPress={() => {
+                  setSurahView('byayah')
+                  setPlayIdx(null)
+                }}>
+                <Text
+                  style={[
+                    s.viewBtnText,
+                    surahView === 'byayah' && s.viewBtnTextActive,
+                  ]}>
+                  Ayah by ayah
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.viewBtn, surahView === 'full' && s.viewBtnActive]}
+                onPress={() => {
+                  setSurahView('full')
+                  loadFullSurah(surahNo)
+                }}>
+                <Text
+                  style={[
+                    s.viewBtnText,
+                    surahView === 'full' && s.viewBtnTextActive,
+                  ]}>
+                  Whole surah
+                </Text>
+              </TouchableOpacity>
+              {playIdx === null ? (
+                <TouchableOpacity
+                  style={s.listenBtn}
+                  onPress={async () => {
+                    setSurahView('full')
+                    const list = await loadFullSurah(surahNo)
+                    if (list.length) setPlayIdx(0)
+                  }}>
+                  <Text style={s.listenBtnText}>▶ Listen</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={s.stopBtn}
+                  onPress={() => setPlayIdx(null)}>
+                  <Text style={s.stopBtnText}>
+                    ◼ {fullAyat[playIdx]?.n ?? ''}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {surahView === 'byayah' && (
+          <>
           <View style={s.numGrid}>
             {surah &&
               Array.from({ length: surah.numberOfAyahs }, (_, i) => i + 1).map(
@@ -232,9 +321,61 @@ export default function QuranScreen() {
               )}
             </View>
           )}
+          </>
+          )}
+
+          {/* Whole-surah reader with follow-along highlight */}
+          {surahView === 'full' && (
+            <View>
+              {fullLoading && (
+                <ActivityIndicator
+                  color={T.ink}
+                  style={{ marginVertical: 30 }}
+                />
+              )}
+              {!fullLoading &&
+                fullAyat.map((a, i) => (
+                  <View
+                    key={a.n}
+                    style={[s.ayahCard, playIdx === i && s.ayahCardPlaying]}>
+                    <View style={s.ayahHeadRow}>
+                      <Text style={s.ayahRef}>
+                        {surahNo}:{a.n}
+                      </Text>
+                      <TouchableOpacity
+                        style={s.navBtn}
+                        onPress={() =>
+                          setPlayIdx(playIdx === i ? null : i)
+                        }>
+                        <Text style={s.navBtnText}>
+                          {playIdx === i ? '◼' : '▶'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={s.arabic}>
+                      {a.ar} ﴿{a.n}﴾
+                    </Text>
+                    <Text style={s.translation}>{a.en}</Text>
+                  </View>
+                ))}
+            </View>
+          )}
         </>
       )}
       <View style={{ height: 30 }} />
+
+      {/* Hidden sequential player — advances ayah by ayah */}
+      {playIdx !== null && fullAyat[playIdx]?.audio ? (
+        <Video
+          source={{ uri: fullAyat[playIdx].audio }}
+          style={{ width: 0, height: 0 }}
+          paused={false}
+          onEnd={() =>
+            setPlayIdx(playIdx + 1 < fullAyat.length ? playIdx + 1 : null)
+          }
+          onError={() => setPlayIdx(null)}
+        />
+      ) : null}
 
       {/* surah picker */}
       <Modal visible={pickSurah} animationType="slide">
@@ -254,6 +395,7 @@ export default function QuranScreen() {
                 onPress={() => {
                   setSurahNo(item.number)
                   setOpenAyah(null)
+                  setPlayIdx(null)
                   setPickSurah(false)
                 }}>
                 <Text style={s.pickerNum}>{item.number}</Text>
@@ -299,6 +441,38 @@ const s = StyleSheet.create({
   chipText: { fontSize: 12, color: T.ink2 },
   chipTextActive: { color: T.bg, fontWeight: '600' },
   blurb: { fontSize: 12, color: T.mute, marginTop: 12 },
+  viewRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  viewBtn: {
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  viewBtnActive: { backgroundColor: T.ink, borderColor: T.ink },
+  viewBtnText: { fontSize: 12, color: T.ink2, fontWeight: '500' },
+  viewBtnTextActive: { color: T.bg, fontWeight: '600' },
+  listenBtn: {
+    backgroundColor: T.ember,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  listenBtnText: { color: T.bg, fontSize: 12, fontWeight: '700' },
+  stopBtn: {
+    borderWidth: 1,
+    borderColor: T.ember,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  stopBtnText: { color: T.ember, fontSize: 12, fontWeight: '700' },
+  ayahCardPlaying: { borderColor: T.ember, backgroundColor: '#fdf6f0' },
   ayahCard: {
     backgroundColor: T.panel,
     borderWidth: 1,
