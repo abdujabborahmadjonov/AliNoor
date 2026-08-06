@@ -112,6 +112,63 @@ export default function QuranPage() {
   const [ayahLoading, setAyahLoading] = useState(false)
   const [cache, setCache] = useState<Record<string, Ayah>>({})
 
+  // Whole-surah reading + continuous listening
+  const [surahView, setSurahView] = useState<'byayah' | 'full'>('byayah')
+  const [fullAyat, setFullAyat] = useState<
+    Array<{ n: number; ar: string; en: string; audio: string }>
+  >([])
+  const [fullLoading, setFullLoading] = useState(false)
+  const [fullFor, setFullFor] = useState(0)
+  const [playIdx, setPlayIdx] = useState<number | null>(null)
+  const seqRef = useRef<HTMLAudioElement | null>(null)
+
+  const loadFullSurah = async (n: number) => {
+    if (fullFor === n && fullAyat.length) return fullAyat
+    setFullLoading(true)
+    try {
+      const res = await fetch(`${API}/surah/${n}/editions/${EDITIONS}`)
+      const j = await res.json()
+      const [ar, en, audio] = j.data
+      const list = ar.ayahs.map((a: any, i: number) => ({
+        n: a.numberInSurah,
+        ar: a.text,
+        en: en.ayahs[i]?.text || '',
+        audio: audio.ayahs[i]?.audio || '',
+      }))
+      setFullAyat(list)
+      setFullFor(n)
+      setFullLoading(false)
+      return list
+    } catch {
+      setFullLoading(false)
+      return []
+    }
+  }
+
+  const stopSequence = () => {
+    seqRef.current?.pause()
+    seqRef.current = null
+    setPlayIdx(null)
+  }
+
+  const playFrom = (
+    i: number,
+    list: Array<{ n: number; ar: string; en: string; audio: string }>
+  ) => {
+    seqRef.current?.pause()
+    if (i >= list.length || !list[i]?.audio) {
+      setPlayIdx(null)
+      return
+    }
+    const a = new Audio(list[i].audio)
+    seqRef.current = a
+    setPlayIdx(i)
+    a.onended = () => playFrom(i + 1, list)
+    a.play().catch(() => setPlayIdx(null))
+  }
+
+  useEffect(() => () => seqRef.current?.pause(), [])
+
   const theme = QURAN_THEMES.find((t) => t.key === themeKey)!
   const surah = surahs.find((s) => s.number === surahNo)
   const openRef = openAyah ? `${surahNo}:${openAyah}` : null
@@ -266,6 +323,7 @@ export default function QuranPage() {
               onChange={(e) => {
                 setSurahNo(Number(e.target.value))
                 setOpenAyah(null)
+                stopSequence()
               }}
               className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm focus:outline-none focus:border-linestrong"
             >
@@ -284,6 +342,7 @@ export default function QuranPage() {
                 onClick={() => {
                   setSurahNo(s.number)
                   setOpenAyah(null)
+                  stopSequence()
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-3 ${
                   s.number === surahNo
@@ -327,8 +386,59 @@ export default function QuranPage() {
               </div>
             )}
 
-            {/* Ayah number chips — nothing downloads until one is tapped */}
+            {/* Reading mode: tap-an-ayah or the whole surah with audio */}
             {surah && (
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                <button
+                  onClick={() => {
+                    setSurahView('byayah')
+                    stopSequence()
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    surahView === 'byayah'
+                      ? 'bg-ink text-bg border-ink'
+                      : 'border-line text-ink2 hover:border-linestrong'
+                  }`}
+                >
+                  Ayah by ayah
+                </button>
+                <button
+                  onClick={async () => {
+                    setSurahView('full')
+                    loadFullSurah(surahNo)
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    surahView === 'full'
+                      ? 'bg-ink text-bg border-ink'
+                      : 'border-line text-ink2 hover:border-linestrong'
+                  }`}
+                >
+                  Whole surah
+                </button>
+                {playIdx === null ? (
+                  <button
+                    onClick={async () => {
+                      setSurahView('full')
+                      const list = await loadFullSurah(surahNo)
+                      playFrom(0, list)
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-ember text-bg hover:opacity-85 transition-opacity"
+                  >
+                    ▶ Listen to surah
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopSequence}
+                    className="px-4 py-2 rounded-lg text-sm font-medium border border-ember/50 text-ember hover:bg-ember/10 transition-colors"
+                  >
+                    ◼ Stop · ayah {fullAyat[playIdx]?.n}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Ayah number chips — nothing downloads until one is tapped */}
+            {surahView === 'byayah' && surah && (
               <div className="flex flex-wrap gap-1.5 mb-6">
                 {Array.from({ length: surah.numberOfAyahs }, (_, i) => i + 1).map(
                   (n) => (
@@ -350,7 +460,7 @@ export default function QuranPage() {
               </div>
             )}
 
-            {openAyah && (
+            {surahView === 'byayah' && openAyah && (
               <div className="border-l-2 border-ember/60 bg-panel border border-line rounded-xl p-6 shadow-card">
                 {ayahLoading && !openData ? (
                   <div className="py-8 text-center">
@@ -409,10 +519,59 @@ export default function QuranPage() {
               </div>
             )}
 
-            {!openAyah && surah && (
+            {surahView === 'byayah' && !openAyah && surah && (
               <p className="font-hand text-2xl text-mute">
                 tap an ayah number above — it loads only what you ask for
               </p>
+            )}
+
+            {/* Whole-surah reader with follow-along highlight */}
+            {surahView === 'full' && (
+              <div className="space-y-3">
+                {fullLoading && (
+                  <div className="py-16 text-center">
+                    <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto" />
+                  </div>
+                )}
+                {!fullLoading &&
+                  fullAyat.map((a, i) => (
+                    <div
+                      key={a.n}
+                      className={`bg-panel border rounded-xl p-5 shadow-card transition-colors ${
+                        playIdx === i
+                          ? 'border-ember bg-ember/5'
+                          : 'border-line'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[11px] text-mute">
+                          {surahNo}:{a.n}
+                        </span>
+                        <button
+                          onClick={() =>
+                            playIdx === i ? stopSequence() : playFrom(i, fullAyat)
+                          }
+                          className={`w-7 h-7 rounded-lg border flex items-center justify-center text-[10px] transition-colors ${
+                            playIdx === i
+                              ? 'bg-ember text-bg border-ember'
+                              : 'border-line text-ink3 hover:border-linestrong hover:text-ink'
+                          }`}
+                          title="Play from this ayah"
+                        >
+                          {playIdx === i ? '◼' : '▶'}
+                        </button>
+                      </div>
+                      <p
+                        dir="rtl"
+                        lang="ar"
+                        className="font-quran text-[26px] leading-[2.4] text-ink mb-3"
+                      >
+                        {a.ar} <span className="text-ember text-lg">﴿{a.n}﴾</span>
+                      </p>
+                      <p className="text-sm leading-relaxed text-ink3">{a.en}</p>
+                    </div>
+                  ))}
+              </div>
             )}
           </div>
         </div>
