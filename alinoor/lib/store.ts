@@ -17,11 +17,25 @@ export const CATEGORIES: Category[] = [
   'educational',
 ]
 
+// The five prayers the adhan can be called for — Sunrise is not one of them.
+export type AdhanPrayer = 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
+
+export const ADHAN_PRAYERS: AdhanPrayer[] = [
+  'Fajr',
+  'Dhuhr',
+  'Asr',
+  'Maghrib',
+  'Isha',
+]
+
 export type AppSettings = {
   city: string
   method: 'MuslimWorldLeague' | 'ISNA' | 'Egyptian' | 'UmmAlQura' | 'Karachi'
   madhab: 'Hanafi' | 'Shafi'
   displayName: string
+  adhanEnabled: boolean
+  adhanVoice: string
+  adhanPrayers: Record<AdhanPrayer, boolean>
 }
 
 export type Task = {
@@ -256,10 +270,31 @@ export const DEFAULT_SETTINGS: AppSettings = {
   method: 'MuslimWorldLeague',
   madhab: 'Hanafi',
   displayName: '',
+  adhanEnabled: false,
+  adhanVoice: 'a1',
+  adhanPrayers: {
+    Fajr: true,
+    Dhuhr: true,
+    Asr: true,
+    Maghrib: true,
+    Isha: true,
+  },
 }
 
-export const loadSettings = () =>
-  read<AppSettings>('alinoor_settings', DEFAULT_SETTINGS)
+// Merged over the defaults rather than returned raw: settings saved before a
+// field existed would otherwise come back missing it, and callers reading e.g.
+// adhanPrayers.Fajr would throw.
+export const loadSettings = (): AppSettings => {
+  const stored = read<Partial<AppSettings>>('alinoor_settings', {})
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    adhanPrayers: {
+      ...DEFAULT_SETTINGS.adhanPrayers,
+      ...(stored.adhanPrayers || {}),
+    },
+  }
+}
 export const saveSettings = (s: AppSettings) => write('alinoor_settings', s)
 
 export const loadTasks = () => read<Task[]>('alinoor_tasks', [])

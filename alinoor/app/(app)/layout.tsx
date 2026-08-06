@@ -1,3 +1,4 @@
+import AdhanPlayer from '@/app/components/AdhanPlayer'
 import AuthGate from '@/app/components/AuthGate'
 
 // The sections that hold personal data share one gate. It lives in the layout
@@ -10,5 +11,12 @@ export default function GatedLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <AuthGate>{children}</AuthGate>
+  // Inside the gate so it only runs for a signed-in user, and in the layout so
+  // it keeps running as they move between these pages.
+  return (
+    <AuthGate>
+      <AdhanPlayer />
+      {children}
+    </AuthGate>
+  )
 }
