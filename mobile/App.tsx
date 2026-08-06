@@ -14,7 +14,6 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { T } from './lib/theme'
 import AuthScreen from './screens/AuthScreen'
-import LandingScreen from './screens/LandingScreen'
 import TodayScreen from './screens/TodayScreen'
 import HabitsScreen from './screens/HabitsScreen'
 import QuranScreen from './screens/QuranScreen'
@@ -60,7 +59,6 @@ export default function App() {
   const [booted, setBooted] = useState(false)
   const [tab, setTab] = useState<Tab>('today')
   const [moreOpen, setMoreOpen] = useState(false)
-  const [landingSeen, setLandingSeen] = useState(false)
 
   useEffect(() => {
     // Never hang on boot: if session restore is slow (offline / expired
@@ -109,29 +107,21 @@ export default function App() {
     )
   }
 
-  // Signed-out visitors meet the landing first, like the website.
-  if (!session && !landingSeen) {
+  // Sign-in is the front door: nothing is browsable without an account.
+  if (!session) {
     return (
       <SafeAreaProvider>
         <SafeAreaView style={s.app} edges={['top', 'left', 'right']}>
           <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
-          <LandingScreen
-            onNavigate={next => {
-              setTab(next)
-              setLandingSeen(true)
-            }}
-          />
+          <AuthScreen />
         </SafeAreaView>
       </SafeAreaProvider>
     )
   }
 
-  const userId = session?.user.id || null
-  const email = session?.user.email || ''
+  const userId = session.user.id
+  const email = session.user.email || ''
   const moreActive = MORE.some(m => m.key === tab)
-  // Reading tabs are public, like the website; personal tabs need sign-in.
-  const GATED: Tab[] = ['today', 'habits', 'settings']
-  const needsAuth = !session && GATED.includes(tab)
 
   return (
     <SafeAreaProvider>
@@ -149,26 +139,20 @@ export default function App() {
 
         {/* Active screen */}
         <View style={s.body}>
-          {needsAuth ? (
-            <AuthScreen />
-          ) : (
-            <>
-              {tab === 'today' && userId && <TodayScreen userId={userId} />}
-              {tab === 'habits' && userId && <HabitsScreen userId={userId} />}
-              {tab === 'quran' && <QuranScreen />}
-              {tab === 'essays' && (
-                <EssaysScreen
-                  userId={userId}
-                  email={email}
-                  name={session?.user.user_metadata?.full_name || ''}
-                />
-              )}
-              {tab === 'hadith' && <HadithScreen />}
-              {tab === 'arabic' && <ArabicScreen userId={userId} />}
-              {tab === 'settings' && userId && (
-                <SettingsScreen userId={userId} email={email} />
-              )}
-            </>
+          {tab === 'today' && <TodayScreen userId={userId} />}
+          {tab === 'habits' && <HabitsScreen userId={userId} />}
+          {tab === 'quran' && <QuranScreen />}
+          {tab === 'essays' && (
+            <EssaysScreen
+              userId={userId}
+              email={email}
+              name={session.user.user_metadata?.full_name || ''}
+            />
+          )}
+          {tab === 'hadith' && <HadithScreen />}
+          {tab === 'arabic' && <ArabicScreen userId={userId} />}
+          {tab === 'settings' && (
+            <SettingsScreen userId={userId} email={email} />
           )}
         </View>
 
