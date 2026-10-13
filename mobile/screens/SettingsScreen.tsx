@@ -1,12 +1,18 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
-import { CITIES } from '../lib/cities'
+import {
+  CITIES,
+  findCity,
+  searchCities,
+  utcOffsetLabel,
+} from '../lib/cities'
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -33,6 +39,7 @@ export default function SettingsScreen({
 }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [pickCity, setPickCity] = useState(false)
+  const [cityQuery, setCityQuery] = useState('')
   const [loadFailed, setLoadFailed] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const alive = useRef(true)
@@ -56,6 +63,21 @@ export default function SettingsScreen({
     }
   }, [load])
 
+  const city = findCity(settings.city)
+  const cityOffset = utcOffsetLabel(city.tz)
+  const cityResults = useMemo(() => searchCities(cityQuery), [cityQuery])
+  // Recomputed per opening so a DST change mid-session still shows right.
+  const offsets = useMemo(
+    () =>
+      pickCity ? new Map(CITIES.map(c => [c.tz, utcOffsetLabel(c.tz)])) : null,
+    [pickCity],
+  )
+
+  const togglePicker = () => {
+    setPickCity(!pickCity)
+    setCityQuery('')
+  }
+
   const update = (patch: Partial<AppSettings>) => {
     // Writing defaults on top of an unread row would reset the city everywhere.
     if (loadFailed) return
@@ -65,7 +87,7 @@ export default function SettingsScreen({
   }
 
   return (
-    <ScrollView style={s.wrap}>
+    <ScrollView style={s.wrap} keyboardShouldPersistTaps="handled">
       <View style={s.card}>
         <Text style={s.heading}>ACCOUNT</Text>
         <Text style={s.mono}>{email}</Text>
@@ -88,27 +110,51 @@ export default function SettingsScreen({
         <>
       <View style={s.card}>
         <Text style={s.heading}>CITY</Text>
-        <TouchableOpacity style={s.select} onPress={() => setPickCity(!pickCity)}>
-          <Text style={s.selectText}>{settings.city}</Text>
+        <TouchableOpacity style={s.select} onPress={togglePicker}>
+          <Text style={s.selectText}>
+            {city.name} · {city.country}
+          </Text>
           <Text style={s.chev}>{pickCity ? '▴' : '▾'}</Text>
         </TouchableOpacity>
+        <Text style={s.tz}>
+          {city.tz}
+          {cityOffset ? `  ·  ${cityOffset}` : ''}
+        </Text>
         {pickCity && (
           <View style={s.options}>
-            {CITIES.map(c => (
+            <TextInput
+              style={s.search}
+              value={cityQuery}
+              onChangeText={setCityQuery}
+              placeholder="Search city, country or UTC offset"
+              placeholderTextColor={T.faint}
+              autoCorrect={false}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+            />
+            {cityResults.length === 0 && (
+              <Text style={s.empty}>No city matches “{cityQuery.trim()}”</Text>
+            )}
+            {cityResults.map(c => (
               <TouchableOpacity
                 key={c.name}
-                style={s.option}
+                style={s.optionRow}
                 onPress={() => {
                   update({ city: c.name })
                   setPickCity(false)
+                  setCityQuery('')
                 }}>
                 <Text
+                  numberOfLines={1}
                   style={[
                     s.optionText,
+                    s.optionName,
                     c.name === settings.city && s.optionActive,
                   ]}>
                   {c.name} · {c.country}
                 </Text>
+                <Text style={s.offset}>{offsets?.get(c.tz)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -203,8 +249,30 @@ const s = StyleSheet.create({
   },
   selectText: { fontSize: 14, color: T.ink },
   chev: { color: T.mute },
+  tz: { fontSize: 12, color: T.mute, marginTop: 8 },
   options: { marginTop: 8 },
+  search: {
+    borderWidth: 1,
+    borderColor: T.line,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: T.ink,
+    backgroundColor: T.panel,
+    marginBottom: 4,
+  },
+  empty: { fontSize: 13, color: T.mute, paddingVertical: 10 },
   option: { paddingVertical: 8 },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  optionName: { flexShrink: 1 },
+  offset: { fontSize: 11, color: T.mute },
   optionText: { fontSize: 14, color: T.ink3 },
   optionActive: { color: T.ink, fontWeight: '600' },
   rowGap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

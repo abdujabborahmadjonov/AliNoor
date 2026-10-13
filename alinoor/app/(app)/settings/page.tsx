@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/app/components/AppShell'
-import { CITIES, findCity } from '@/lib/cities'
+import CityPicker from '@/app/components/CityPicker'
+import { findCity, utcOffsetLabel } from '@/lib/cities'
 import { supabase } from '@/lib/supabase'
 import { ADHAN_VOICES, adhanUrl } from '@/lib/adhan-audio'
 import {
@@ -128,26 +129,23 @@ export default function PageInner() {
           <div className="grid sm:grid-cols-2 gap-5 mb-5">
             <div>
               <label className="microlabel block mb-2">City</label>
-              <select
+              <CityPicker
                 value={settings.city}
-                onChange={(e) => update({ city: e.target.value })}
-                className="w-full px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm focus:outline-none focus:border-linestrong"
-              >
-                {CITIES.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name} · {c.country}
-                  </option>
-                ))}
-              </select>
+                onChange={(name) => update({ city: name })}
+              />
               <p className="font-hand text-lg text-mute mt-2">
-                {city.name}, {city.country} · {city.lat.toFixed(2)}°N ·{' '}
-                {city.lng.toFixed(2)}°E
+                {city.name}, {city.country} · {Math.abs(city.lat).toFixed(2)}°
+                {city.lat < 0 ? 'S' : 'N'} · {Math.abs(city.lng).toFixed(2)}°
+                {city.lng < 0 ? 'W' : 'E'}
               </p>
             </div>
             <div>
               <label className="microlabel block mb-2">Timezone</label>
-              <div className="px-4 py-2.5 border border-line rounded-lg bg-panel2 text-sm text-ink3 font-mono">
-                {city.tz}
+              <div className="px-4 py-2.5 border border-line rounded-lg bg-panel2 text-sm text-ink3 font-mono flex justify-between gap-3">
+                <span className="truncate">{city.tz}</span>
+                <span className="text-mute flex-shrink-0">
+                  {utcOffsetLabel(city.tz)}
+                </span>
               </div>
             </div>
           </div>
