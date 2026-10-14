@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Abdujabbor Ahmadjonov</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Abdujabbor Ahmadjonov — builder from Ferghana, studying in Edmonton. Projects, hackathons, trips.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: hackathon-site structure — illustrated landscape hero, wavy bands, sticker cards,
+   a "schedule" timeline, FAQ accordion and a mountain footer. Day sky in light, aurora night in dark. */
+:root {
+  --sky-top: #9fd3ff;
+  --sky-bot: #e6f4ff;
+  --bg: #f4f9ff;
+  --band: #e3f0ff;
+  --card: #ffffff;
+  --ink: #1b2a4e;
+  --ink-soft: #4a5a80;
+  --line: #c9dcf5;
+  --maple: #e5484d;
+  --maple-soft: #ffe1e1;
+  --pine: #2f7a57;
+  --pine-dark: #1f5a40;
+  --sun: #ffc94a;
+  --mtn-far: #b7cdf0;
+  --mtn-mid: #8eaee0;
+  --mtn-near: #5f86c9;
+  --snow: #ffffff;
+  --aurora-a: transparent;
+  --aurora-b: transparent;
+  --btn: #1b2a4e;
+  --btn-ink: #ffffff;
+  --shadow: 0 6px 0 #c9dcf5;
+  --f-display: "Fredoka", "Nunito", ui-rounded, system-ui, sans-serif;
+  --f-body: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --wrap: 1120px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sky-top: #070d24; --sky-bot: #18275a; --bg: #0c1430; --band: #111c40; --card: #16224c;
+    --ink: #eef3ff; --ink-soft: #a9b8de; --line: #2a3a6e; --maple: #ff6b6f; --maple-soft: #3a1f36;
+    --pine: #3fae7c; --pine-dark: #123d32; --sun: #fff1c2; --mtn-far: #263770; --mtn-mid: #1c2b5e;
+    --mtn-near: #121e47; --snow: #d9e4ff; --aurora-a: rgba(80, 255, 180, .35); --aurora-b: rgba(140, 110, 255, .3);
+    --btn: #ffc94a; --btn-ink: #1b2a4e; --shadow: 0 6px 0 #070d24; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --sky-top: #070d24; --sky-bot: #18275a; --bg: #0c1430; --band: #111c40; --card: #16224c;
+  --ink: #eef3ff; --ink-soft: #a9b8de; --line: #2a3a6e; --maple: #ff6b6f; --maple-soft: #3a1f36;
+  --pine: #3fae7c; --pine-dark: #123d32; --sun: #fff1c2; --mtn-far: #263770; --mtn-mid: #1c2b5e;
+  --mtn-near: #121e47; --snow: #d9e4ff; --aurora-a: rgba(80, 255, 180, .35); --aurora-b: rgba(140, 110, 255, .3);
+  --btn: #ffc94a; --btn-ink: #1b2a4e; --shadow: 0 6px 0 #070d24; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 1.0625rem/1.65 var(--f-body);
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+img { max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--maple); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.1; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.wrap {
+  max-width: var(--wrap); margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.eyebrow {
+  font: 500 .8rem/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--maple); display: inline-flex; align-items: center; gap: .5rem;
+}
+.eyebrow svg { width: 14px; height: 14px; fill: var(--maple); }
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: .7rem; }
+.logo { display: flex; align-items: center; gap: .55rem; font: 700 1.2rem var(--f-display); text-decoration: none; }
+.logo-badge {
+  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--maple); color: #fff; font-size: 1rem; transform: rotate(-6deg);
+}
+.nav-links { display: flex; align-items: center; gap: 1.4rem; font-weight: 700; }
+.nav-links a { text-decoration: none; color: var(--ink-soft); }
+.nav-links a:hover { color: var(--ink); }
+.theme-btn {
+  border: 2px solid var(--line); background: var(--card); color: var(--ink);
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+}
+.theme-btn svg { width: 18px; height: 18px; fill: currentColor; }
+@media (max-width: 760px) { .nav-links a.hide-sm { display: none; } .nav-links { gap: .9rem; } }
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bot) 70%, var(--bg));
+}
+.hero .wrap { position: relative; z-index: 3; padding-block: clamp(3rem, 8vw, 6rem) 0; }
+.hero-copy { max-width: 720px; }
+.hello {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .9rem .35rem .4rem;
+  border-radius: 999px; background: var(--card); box-shadow: var(--shadow);
+  font-weight: 700; font-size: .95rem; margin-bottom: 1.4rem;
+}
+.hello .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--maple-soft); display: grid; place-items: center; }
+.hello .dot svg { width: 14px; height: 14px; fill: var(--maple); }
+.hero h1 { font-size: clamp(2.6rem, 7.5vw, 5.4rem); font-weight: 700; letter-spacing: -.01em; }
+.hero h1 .accent { color: var(--maple); }
+.hero h1 .under { position: relative; white-space: nowrap; }
+.hero h1 .under::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: .02em; height: .18em; z-index: -1;
+  background: var(--sun); border-radius: 999px; opacity: .85;
+}
+.hero-sub { margin-top: 1.25rem; font-size: clamp(1.1rem, 2.2vw, 1.3rem); color: var(--ink-soft); max-width: 600px; }
+.hero-meta { margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font: 500 .8rem/1 var(--f-mono); padding: .5rem .75rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 85%, transparent); border: 1.5px solid var(--line);
+}
+.cta { margin-top: 1.8rem; display: flex; flex-wrap: wrap; gap: .8rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; font: 600 1.05rem var(--f-display);
+  padding: .85rem 1.5rem; border-radius: 999px; text-decoration: none; cursor: pointer;
+  background: var(--btn); color: var(--btn-ink); border: 2.5px solid var(--btn);
+  transition: transform .15s ease, box-shadow .15s ease; box-shadow: 0 4px 0 color-mix(in srgb, var(--btn) 55%, #000);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn.ghost { background: var(--card); color: var(--ink); border-color: var(--line); box-shadow: 0 4px 0 var(--line); }
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+.scene { position: relative; z-index: 1; margin-top: clamp(-1rem, -2vw, 0rem); }
+.scene svg { display: block; width: 100%; height: auto; }
+.aurora {
+  position: absolute; inset: 0 0 auto 0; height: 70%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 25% 30%, var(--aurora-a), transparent 70%),
+    radial-gradient(50% 35% at 70% 20%, var(--aurora-b), transparent 70%);
+  filter: blur(20px); animation: sway 14s ease-in-out infinite alternate;
+}
+.stars { position: absolute; inset: 0; z-index: 0; opacity: 0; }
+:root[data-theme="dark"] .stars { opacity: 1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .stars { opacity: 1; } }
+.cloud { fill: #fff; opacity: .9; }
+:root[data-theme="dark"] .cloud { opacity: .08; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cloud { opacity: .08; } }
+.drift { animation: drift 40s linear infinite; }
+.drift.slow { animation-duration: 70s; }
+@keyframes drift { from { transform: translateX(-12%); } to { transform: translateX(112%); } }
+@keyframes sway { from { transform: translateX(-3%) skewX(-4deg); } to { transform: translateX(3%) skewX(4deg); } }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-10px) rotate(8deg); } }
+.leaf { animation: bob 5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.leaf.b { animation-delay: -2s; animation-duration: 6s; }
+
+/* ---------- stats strip ---------- */
+.stats { background: var(--pine-dark); color: #fff; }
+.stats .wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding-block: 1.8rem; }
+.stat b { display: block; font: 700 clamp(1.8rem, 4vw, 2.6rem)/1 var(--f-display); color: var(--sun); font-variant-numeric: tabular-nums; }
+.stat span { font: 500 .8rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+@media (max-width: 640px) { .stats .wrap { grid-template-columns: repeat(2, 1fr); row-gap: 1.4rem; } }
+
+/* ---------- sections ---------- */
+section.block { padding-block: clamp(4rem, 9vw, 6.5rem); }
+section.alt { background: var(--band); }
+.wave { display: block; width: 100%; height: 48px; }
+.wave path { fill: var(--band); }
+.sec-head { display: grid; gap: .7rem; margin-bottom: 2.6rem; max-width: 680px; }
+.sec-head h2 { font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 700; }
+.sec-head p { color: var(--ink-soft); font-size: 1.1rem; }
+
+/* about */
+.about { display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+.about-text { display: grid; gap: 1rem; font-size: 1.12rem; max-width: 62ch; min-width: 0; }
+.now {
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 22px; padding: 1.6rem;
+  box-shadow: 8px 8px 0 var(--maple); transform: rotate(1.2deg); min-width: 0;
+}
+.now h3 { font-size: 1.35rem; margin-bottom: .9rem; display: flex; align-items: center; gap: .5rem; }
+.now h3 .live { width: 10px; height: 10px; border-radius: 50%; background: var(--pine); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pine) 30%, transparent); }
+.now ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.now li { display: grid; grid-template-columns: 6.5rem 1fr; gap: .6rem; }
+.now li span { font: 500 .78rem/1.9 var(--f-mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+@media (max-width: 820px) { .about { grid-template-columns: 1fr; } .now { transform: none; } }
+
+/* projects */
+.filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.8rem; }
+.filter {
+  font: 600 .95rem var(--f-display); padding: .5rem 1.05rem; border-radius: 999px; cursor: pointer;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink-soft);
+}
+.filter[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 1.4rem; }
+.proj {
+  background: var(--card); border: 2px solid var(--line); border-radius: 24px; padding: 1.5rem;
+  display: flex; flex-direction: column; gap: .85rem; min-width: 0;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.proj:hover { transform: translateY(-4px); border-color: var(--ink); box-shadow: 0 8px 0 var(--line); }
+.proj-top { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.sticker {
+  width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+  font: 700 1.4rem var(--f-display); color: #fff; transform: rotate(-5deg);
+}
+.tag { font: 500 .72rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; padding: .45rem .65rem; border-radius: 999px; background: var(--maple-soft); color: var(--maple); white-space: nowrap; }
+.tag.hack { background: color-mix(in srgb, var(--sun) 35%, transparent); color: var(--ink); }
+.proj h3 { font-size: 1.45rem; }
+.proj p { color: var(--ink-soft); }
+.stack { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; padding-top: .4rem; }
+.stack span { font: 500 .75rem var(--f-mono); padding: .3rem .55rem; border-radius: 8px; background: var(--band); color: var(--ink-soft); }
+.links { display: flex; gap: 1rem; font-weight: 800; font-size: .95rem; }
+.links a { text-decoration: none; border-bottom: 2.5px solid var(--sun); }
+.links a:hover { color: var(--maple); }
+.links .muted { color: var(--ink-soft); font-weight: 600; font-style: italic; }
+
+/* trips — postcards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 1fr)); gap: 1.4rem; }
+.postcard {
+  background: var(--card); border-radius: 18px; padding: .8rem .8rem 1.1rem; min-width: 0;
+  box-shadow: 0 10px 0 var(--line); border: 2px solid var(--line);
+  transition: transform .2s ease;
+}
+.postcard:nth-child(odd) { transform: rotate(-1.5deg); }
+.postcard:nth-child(even) { transform: rotate(1.5deg); }
+.postcard:hover { transform: rotate(0) translateY(-6px); }
+.postcard .art { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3; max-width: 100%; }
+.postcard .art svg { width: 100%; height: 100%; display: block; }
+.stamp {
+  position: absolute; top: 8px; right: 8px; padding: .35rem .5rem; background: var(--card); color: var(--maple);
+  font: 500 .66rem/1.1 var(--f-mono); text-transform: uppercase; letter-spacing: .06em; text-align: center;
+  border: 2px dashed var(--maple); border-radius: 6px;
+}
+.postcard h3 { font-size: 1.25rem; margin-top: .9rem; }
+.postcard .when { font: 500 .78rem var(--f-mono); color: var(--maple); text-transform: uppercase; letter-spacing: .08em; }
+.postcard p { color: var(--ink-soft); font-size: .98rem; margin-top: .35rem; }
+
+/* journey — schedule-style */
+.schedule { display: grid; gap: .9rem; max-width: 860px; }
+.slot {
+  display: grid; grid-template-columns: 7.5rem 1fr; gap: 1.2rem; align-items: start;
+  background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 1.1rem 1.3rem;
+}
+.slot time { font: 500 .85rem/1.9 var(--f-mono); color: var(--maple); font-variant-numeric: tabular-nums; }
+.slot h3 { font-size: 1.2rem; }
+.slot p { color: var(--ink-soft); font-size: .98rem; margin-top: .2rem; }
+.slot .kind { font: 500 .7rem var(--f-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--pine); }
+@media (max-width: 560px) { .slot { grid-template-columns: 1fr; gap: .3rem; } }
+
+/* toolbox — sponsor-wall style */
+.tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 1rem; }
+.tool {
+  background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 1rem;
+  display: grid; gap: .15rem; text-align: center;
+}
+.tool b { font: 600 1.1rem var(--f-display); }
+.tool span { font: 500 .72rem var(--f-mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+
+/* faq */
+.faq { display: grid; gap: .9rem; max-width: 860px; }
+details {
+  background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 0 1.3rem;
+}
+details[open] { border-color: var(--ink); }
+summary {
+  list-style: none; cursor: pointer; padding: 1.1rem 0; font: 600 1.15rem var(--f-display);
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+}
+summary::-webkit-details-marker { display: none; }
+summary .plus { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--band); display: grid; place-items: center; transition: transform .2s; font-weight: 700; }
+details[open] .plus { transform: rotate(45deg); background: var(--maple); color: #fff; }
+details p { padding-bottom: 1.2rem; color: var(--ink-soft); max-width: 65ch; }
+
+/* footer */
+footer { position: relative; background: var(--pine-dark); color: #fff; }
+footer .ridge { display: block; width: 100%; height: auto; background: var(--bg); }
+footer .wrap { padding-block: 2.5rem 3rem; display: grid; gap: 1.6rem; }
+footer h2 { font-size: clamp(2rem, 5vw, 3.2rem); }
+footer h2 span { color: var(--sun); }
+.social { display: flex; flex-wrap: wrap; gap: .7rem; }
+.social a {
+  text-decoration: none; font: 600 1rem var(--f-display); padding: .7rem 1.2rem; border-radius: 999px;
+  background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.25);
+}
+.social a:hover { background: var(--sun); color: #1b2a4e; border-color: var(--sun); }
+.fine { font: 400 .8rem var(--f-mono); opacity: .7; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======= EDIT ME: everything personal lives in the DATA block near the bottom ======= -->
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="logo" href="#top"><span class="logo-badge">AA</span>Abdujabbor</a>
+    <div class="nav-links">
+      <a href="#about" class="hide-sm">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#trips">Trips</a>
+      <a href="#journey" class="hide-sm">Journey</a>
+      <a href="#faq" class="hide-sm">FAQ</a>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch day / night">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="aurora" aria-hidden="true"></div>
+  <canvas class="stars" id="stars" aria-hidden="true"></canvas>
+
+  <div class="wrap">
+    <div class="hero-copy">
+      <div class="hello"><span class="dot"><svg viewBox="0 0 24 24"><path d="M12 2l1.8 4.2 3-1.6-.9 5 3.4-1.4-1 3 2.7 1.3-6 4.6.6 2.4-3.6-.7V22h-1v-3.2l-3.6.7.6-2.4-6-4.6 2.7-1.3-1-3 3.4 1.4-.9-5 3 1.6z"/></svg></span>Salom! From Ferghana to Edmonton</div>
+      <h1>Hi, I'm <span class="accent">Abdujabbor</span>.<br>I build <span class="under">apps people use</span>.</h1>
+      <p class="hero-sub">Student developer at the University of Alberta. Android engineer turned full-stack and AI builder. I ship at hackathons, and I make tools for my community.</p>
+      <div class="hero-meta">
+        <span class="chip">📍 Edmonton, AB</span>
+        <span class="chip">🏠 Ferghana, UZ</span>
+        <span class="chip">KYNTRIC AI</span>
+      </div>
+      <div class="cta">
+        <a class="btn" href="#projects">See my projects
+          <svg viewBox="0 0 24 24"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8z"/></svg></a>
+        <a class="btn ghost" href="#trips">Where I've been</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice">
+      <!-- sun / moon -->
+      <circle cx="1180" cy="90" r="54" fill="var(--sun)" opacity=".95"/>
+      <!-- clouds -->
+      <g class="drift"><g class="cloud"><ellipse cx="120" cy="70" rx="70" ry="24"/><ellipse cx="160" cy="55" rx="44" ry="28"/><ellipse cx="90" cy="60" rx="34" ry="20"/></g></g>
+      <g class="drift slow"><g class="cloud"><ellipse cx="520" cy="120" rx="80" ry="22"/><ellipse cx="560" cy="104" rx="46" ry="26"/></g></g>
+      <!-- far range -->
+      <polygon fill="var(--mtn-far)" points="0,300 120,210 220,260 360,150 480,240 600,180 720,250 860,140 980,230 1100,170 1240,240 1340,190 1440,230 1440,420 0,420"/>
+      <!-- mid range with snow caps -->
+      <polygon fill="var(--mtn-mid)" points="0,340 160,230 300,320 440,210 560,300 700,200 840,310 1000,220 1140,300 1280,215 1440,300 1440,420 0,420"/>
+      <polygon fill="var(--snow)" points="440,210 412,238 430,234 444,246 458,232 474,240"/>
+      <polygon fill="var(--snow)" points="700,200 672,228 690,224 704,236 718,224 734,230"/>
+      <polygon fill="var(--snow)" points="1280,215 1252,243 1270,238 1284,250 1298,238 1312,244"/>
+      <!-- near hills -->
+      <path fill="var(--mtn-near)" d="M0 360 Q 240 300 480 350 T 960 345 T 1440 340 V420 H0Z"/>
+      <!-- ground -->
+      <path fill="var(--pine)" d="M0 392 Q 360 360 720 388 T 1440 380 V420 H0Z"/>
+      <!-- pines -->
+      <g fill="var(--pine-dark)">
+        <polygon points="70,395 95,320 120,395"/><polygon points="78,360 95,300 112,360"/>
+        <polygon points="130,398 150,340 170,398"/>
+        <polygon points="1250,392 1278,312 1306,392"/><polygon points="1260,352 1278,290 1296,352"/>
+        <polygon points="1320,396 1342,334 1364,396"/>
+        <polygon points="1380,392 1400,340 1420,392"/>
+      </g>
+      <!-- tent + laptop glow (the hacker camp) -->
+      <g transform="translate(860 330)">
+        <polygon points="0,62 52,0 104,62" fill="var(--maple)"/>
+        <polygon points="40,62 52,22 64,62" fill="var(--pine-dark)"/>
+        <rect x="46" y="48" width="12" height="8" rx="1" fill="var(--sun)"/>
+        <line x1="52" y1="0" x2="52" y2="-14" stroke="var(--ink)" stroke-width="3"/>
+        <polygon points="52,-14 70,-9 52,-4" fill="var(--sun)"/>
+      </g>
+      <!-- campfire -->
+      <g transform="translate(990 380)">
+        <rect x="-14" y="6" width="28" height="5" rx="2" fill="#7a4a2a" transform="rotate(15)"/>
+        <rect x="-14" y="6" width="28" height="5" rx="2" fill="#7a4a2a" transform="rotate(-15)"/>
+        <path d="M0 -18 C 10 -6 8 4 0 6 C -8 4 -10 -6 0 -18Z" fill="var(--sun)"/>
+        <path d="M0 -6 C 4 0 3 4 0 5 C -3 4 -4 0 0 -6Z" fill="var(--maple)"/>
+      </g>
+      <!-- maple leaves -->
+      <g class="leaf" transform="translate(300 250) scale(1.6)" fill="var(--maple)"><path d="M12 2l1.8 4.2 3-1.6-.9 5 3.4-1.4-1 3 2.7 1.3-6 4.6.6 2.4-3.6-.7V22h-1v-3.2l-3.6.7.6-2.4-6-4.6 2.7-1.3-1-3 3.4 1.4-.9-5 3 1.6z"/></g>
+      <g class="leaf b" transform="translate(1080 210) scale(1.2)" fill="var(--maple)"><path d="M12 2l1.8 4.2 3-1.6-.9 5 3.4-1.4-1 3 2.7 1.3-6 4.6.6 2.4-3.6-.7V22h-1v-3.2l-3.6.7.6-2.4-6-4.6 2.7-1.3-1-3 3.4 1.4-.9-5 3 1.6z"/></g>
+    </svg>
+  </div>
+</header>
+
+<div class="stats" aria-label="Quick numbers">
+  <div class="wrap" id="stats"></div>
+</div>
+
+<section class="block" id="about">
+  <div class="wrap about">
+    <div>
+      <div class="sec-head">
+        <span class="eyebrow">About me</span>
+        <h2>Builder, student, and long-time Android dev</h2>
+      </div>
+      <div class="about-text" id="aboutText"></div>
+    </div>
+    <aside class="now" aria-label="What I'm doing now">
+      <h3><span class="live"></span>Right now</h3>
+      <ul id="nowList"></ul>
+    </aside>
+  </div>
+</section>
+
+<svg class="wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true"><path d="M0 48 C 240 0 480 0 720 24 S 1200 48 1440 8 V48Z"/></svg>
+<section class="block alt" id="projects">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Projects</span>
+      <h2>Things I've shipped</h2>
+      <p>Hackathon builds, community apps, and the Android work I started with.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter projects" id="filters"></div>
+    <div class="grid" id="projectGrid"></div>
+  </div>
+</section>
+<svg class="wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true" style="transform:scaleY(-1)"><path d="M0 48 C 240 0 480 0 720 24 S 1200 48 1440 8 V48Z"/></svg>
+
+<section class="block" id="trips">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Trips</span>
+      <h2>Postcards from the road</h2>
+      <p>Hackathons, cities, and the places in between.</p>
+    </div>
+    <div class="cards" id="tripCards"></div>
+  </div>
+</section>
+
+<svg class="wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true"><path d="M0 48 C 240 0 480 0 720 24 S 1200 48 1440 8 V48Z"/></svg>
+<section class="block alt" id="journey">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Journey</span>
+      <h2>The schedule so far</h2>
+    </div>
+    <div class="schedule" id="schedule"></div>
+
+    <div class="sec-head" style="margin-top:4.5rem">
+      <span class="eyebrow">Toolbox</span>
+      <h2>What I build with</h2>
+    </div>
+    <div class="tools" id="tools"></div>
+  </div>
+</section>
+<svg class="wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true" style="transform:scaleY(-1)"><path d="M0 48 C 240 0 480 0 720 24 S 1200 48 1440 8 V48Z"/></svg>
+
+<section class="block" id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">FAQ</span>
+      <h2>Frequently asked questions</h2>
+    </div>
+    <div class="faq" id="faqList"></div>
+  </div>
+</section>
+
+<footer id="contact">
+  <svg class="ridge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+    <polygon fill="var(--pine-dark)" points="0,120 0,80 90,40 170,85 260,20 360,90 450,50 560,95 650,30 760,88 860,45 960,92 1060,25 1160,85 1260,50 1360,95 1440,60 1440,120"/>
+  </svg>
+  <div class="wrap">
+    <h2>Let's build something <span>together</span>.</h2>
+    <div class="social" id="social"></div>
+    <p class="fine">© <span id="year"></span> Abdujabbor Ahmadjonov · Made in Edmonton, where it's −30° half the year.</p>
+  </div>
+</footer>
+
+<script>
+/* ============================== DATA ==============================
+   Edit this block to update the site. Nothing else needs to change. */
+const DATA = {
+  stats: [
+    { n: "2+", label: "years of Android" },
+    { n: "100+", label: "GitHub repos" },
+    { n: "3", label: "hackathons" },          // TODO: update with your real count
+    { n: "2", label: "countries called home" }
+  ],
+  about: [
+    "I grew up in Ferghana, Uzbekistan, and now study in Edmonton at the University of Alberta.",
+    "I started as a native Android developer, building Kotlin apps for startups like Medland. These days I work across the stack: Next.js and React Native on the front, Python and Go on the back, and a lot of AI in between.",
+    "Most of what I build starts with a real person in mind: a kid nervous about a hospital visit, a Muslim trying to keep a daily routine, a first-year stuck on integrals."
+  ],
+  now: [
+    { k: "Building", v: "AliNoor 2.0, with whole-surah Quran reading and the adhan at prayer time" },
+    { k: "Working at", v: "KYNTRIC AI" },
+    { k: "Studying", v: "University of Alberta" },
+    { k: "Writing", v: "My Telegram blog, with Donishmand running the comments" }
+  ],
+  // kind: "hackathon" | "community" | "ai" | "android"  ·  repo/live: leave "" to hide the link
+  projects: [
+    { name: "AliNoor", mark: "ن", color: "#2f7a57", kind: "community", tag: "Live",
+      desc: "A daily companion for Muslims: Quran reading and listening, hadith, prayer times with the adhan, habits, and community essays. On the web and on mobile.",
+      stack: ["Next.js", "Supabase", "React Native", "TypeScript"],
+      repo: "https://github.com/abdujabborahmadjonov/AliNoor", live: "https://abdujabborahmadjonov.github.io/AliNoor/" },
+    { name: "KYRO AI · BraveTales", mark: "K", color: "#e5484d", kind: "ai", tag: "AI + Health",
+      desc: "Voice-powered storybooks that read a child's medical chart and prepare them for their real procedure, so the hospital feels less scary.",
+      stack: ["Medplum", "Deepgram", "Claude", "TypeScript"],
+      repo: "https://github.com/abdujabborahmadjonov/KYRO-AI", live: "" },
+    { name: "EduMatch", mark: "E", color: "#5f86c9", kind: "hackathon", tag: "HackMIT 2026",
+      desc: "An AI-powered professional network that matches educators with each other. I built the backend.",
+      stack: ["Python", "FastAPI", "LLMs"],
+      repo: "", live: "" },
+    { name: "Dermato", mark: "D", color: "#d08a2c", kind: "ai", tag: "AI + Health",
+      desc: "AI skin-health checker. A classifier trained on the HAM10000 dermatoscopy dataset, served behind a FastAPI backend.",
+      stack: ["Next.js", "FastAPI", "PyTorch"],
+      repo: "", live: "" },
+    { name: "Qurama", mark: "Q", color: "#8a5cc7", kind: "community", tag: "Archive",
+      desc: "A digital archive of the untold stories of Central Asian immigrant women in Canada.",
+      stack: ["JavaScript", "Web"],
+      repo: "https://github.com/abdujabborahmadjonov/qurama", live: "" },
+    { name: "CalcTutor", mark: "∫", color: "#1b2a4e", kind: "ai", tag: "EdTech",
+      desc: "A step-by-step Calculus I and II tutor, built around the courses Alberta students actually take.",
+      stack: ["TypeScript", "AI"],
+      repo: "https://github.com/abdujabborahmadjonov/calctutor", live: "" },
+    { name: "Donishmand", mark: "د", color: "#2c8c99", kind: "community", tag: "Bot",
+      desc: "The comment-section bot for my Telegram blog. It answers readers and keeps the discussion going.",
+      stack: ["Python", "Telegram API"],
+      repo: "", live: "" },
+    { name: "Medland", mark: "M", color: "#3f9a6b", kind: "android", tag: "Startup",
+      desc: "Native Android work for the Medland health startup, including sectioned notification flows.",
+      stack: ["Kotlin", "Android"],
+      repo: "https://github.com/abdujabborahmadjonov/SectionNotificationMedland", live: "" },
+    { name: "Android lab", mark: "A", color: "#6b7a99", kind: "android", tag: "2023–25",
+      desc: "Video calling with Agora and Zego, foreground services, AdMob, MVVM, and real-estate and school apps.",
+      stack: ["Kotlin", "Jetpack", "WebSockets"],
+      repo: "https://github.com/abdujabborahmadjonov?tab=repositories&language=kotlin", live: "" }
+  ],
+  // TODO: confirm dates and add your own stories. scene: "city" | "mountains" | "campus" | "home"
+  trips: [
+    { place: "Cambridge, MA", event: "HackMIT", when: "Sep 2026", stamp: "USA", scene: "city",
+      note: "Built EduMatch over a weekend at MIT." },
+    { place: "Waterloo, ON", event: "Hack the North", when: "Sep 2026", stamp: "CAN", scene: "campus",
+      note: "Canada's biggest hackathon. 36 hours of building, a lot of snacks." },
+    { place: "Waterloo, ON", event: "Hack Canada", when: "Mar 2026", stamp: "CAN", scene: "campus",
+      note: "A weekend of building with AI alongside hackers from across the country." },
+    { place: "Rocky Mountains, AB", event: "Banff & Jasper", when: "Anytime", stamp: "AB", scene: "mountains",
+      note: "Four hours from Edmonton, and the reason this site has mountains." },
+    { place: "Ferghana, Uzbekistan", event: "Home", when: "Always", stamp: "UZ", scene: "home",
+      note: "Where it all started. Fruit, family, and my first lines of Kotlin." }
+  ],
+  schedule: [
+    { t: "2022", kind: "Start", title: "First Android apps", text: "Started building native Android apps in Kotlin from Ferghana." },
+    { t: "2023", kind: "Work", title: "Medland and freelance", text: "Shipped Android features for startups, with a 100% success rate on freelance projects." },
+    { t: "2025", kind: "Move", title: "Edmonton", text: "Moved to Canada to study at the University of Alberta." },
+    { t: "2026", kind: "Build", title: "AliNoor, KYRO AI, hackathons", text: "Went full-stack and AI-first. Launched AliNoor and joined KYNTRIC AI." },
+    { t: "Next", kind: "Soon", title: "Your idea?", text: "I'm open to internships, hackathon teams, and interesting collaborations." }
+  ],
+  tools: [
+    { name: "Kotlin", type: "Android" }, { name: "TypeScript", type: "Web" }, { name: "Next.js", type: "Framework" },
+    { name: "React Native", type: "Mobile" }, { name: "Python", type: "Backend · ML" }, { name: "FastAPI", type: "API" },
+    { name: "Go", type: "Backend" }, { name: "Supabase", type: "Data" }, { name: "Claude", type: "AI" },
+    { name: "PyTorch", type: "ML" }, { name: "Telegram Bots", type: "Automation" }, { name: "Swift", type: "iOS" }
+  ],
+  faq: [
+    { q: "What are you looking for?", a: "Internships in mobile, full-stack or applied AI, plus hackathon teammates who like shipping real things." },
+    { q: "Which hackathons have you been to?", a: "HackMIT, Hack the North, and Hack Canada so far. I'm always looking for the next one." },
+    { q: "Can I use AliNoor?", a: "Yes. It's live on the web and free to use, and the mobile app follows the same design." },
+    { q: "What languages do you speak?", a: "Uzbek, Russian, and English, and a little Arabic from reading the Quran." },
+    { q: "How do I reach you?", a: "Message me on Telegram, or open an issue or say hi on GitHub. Links are just below." }
+  ],
+  social: [
+    { label: "GitHub", url: "https://github.com/abdujabborahmadjonov" },
+    { label: "Telegram", url: "https://t.me/abdujabbor_ahmadjonov" },
+    { label: "AliNoor", url: "https://abdujabborahmadjonov.github.io/AliNoor/" }
+    // { label: "LinkedIn", url: "https://www.linkedin.com/in/…" },
+    // { label: "Devpost", url: "https://devpost.com/…" }
+  ]
+};
+/* ============================ END DATA ============================ */
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ext = 'target="_blank" rel="noopener"';
+
+$("stats").innerHTML = DATA.stats.map((s) => `<div class="stat"><b>${esc(s.n)}</b><span>${esc(s.label)}</span></div>`).join("");
+$("aboutText").innerHTML = DATA.about.map((p) => `<p>${esc(p)}</p>`).join("");
+$("nowList").innerHTML = DATA.now.map((n) => `<li><span>${esc(n.k)}</span><div>${esc(n.v)}</div></li>`).join("");
+
+const KINDS = [["all", "All"], ["hackathon", "Hackathons"], ["ai", "AI"], ["community", "Community"], ["android", "Android"]];
+function renderProjects(kind) {
+  const list = DATA.projects.filter((p) => kind === "all" || p.kind === kind);
+  $("projectGrid").innerHTML = list.map((p) => {
+    const links = [p.live && `<a href="${esc(p.live)}" ${ext}>Open app ↗</a>`, p.repo && `<a href="${esc(p.repo)}" ${ext}>Code ↗</a>`].filter(Boolean);
+    return `<article class="proj">
+      <div class="proj-top"><span class="sticker" style="background:${esc(p.color)}">${esc(p.mark)}</span>
+        <span class="tag${p.kind === "hackathon" ? " hack" : ""}">${esc(p.tag)}</span></div>
+      <h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p>
+      <div class="stack">${p.stack.map((s) => `<span>${esc(s)}</span>`).join("")}</div>
+      <div class="links">${links.length ? links.join("") : `<span class="muted">Private repo</span>`}</div>
+    </article>`;
+  }).join("");
+}
+$("filters").innerHTML = KINDS.map(([k, l]) => `<button type="button" class="filter" id="f-${k}" data-k="${k}" aria-pressed="${k === "all"}">${l}</button>`).join("");
+$("filters").addEventListener("click", (e) => {
+  const b = e.target.closest(".filter"); if (!b) return;
+  document.querySelectorAll(".filter").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  renderProjects(b.dataset.k);
+});
+renderProjects("all");
+
+/* postcard illustrations, drawn from the theme tokens */
+const SCENES = {
+  city: `<rect width="400" height="300" fill="var(--sky-bot)"/><circle cx="320" cy="70" r="30" fill="var(--sun)"/>
+    <g fill="var(--mtn-near)"><rect x="30" y="140" width="50" height="160"/><rect x="90" y="100" width="60" height="200"/><rect x="160" y="160" width="40" height="140"/>
+    <path d="M210 300V120h70v180z"/><circle cx="245" cy="120" r="35"/><rect x="290" y="150" width="70" height="150"/></g>
+    <g fill="var(--sun)" opacity=".8"><rect x="100" y="120" width="10" height="10"/><rect x="125" y="150" width="10" height="10"/><rect x="300" y="170" width="10" height="10"/><rect x="330" y="200" width="10" height="10"/></g>
+    <rect y="270" width="400" height="30" fill="var(--pine)"/>`,
+  campus: `<rect width="400" height="300" fill="var(--sky-bot)"/><circle cx="80" cy="70" r="28" fill="var(--sun)"/>
+    <rect y="230" width="400" height="70" fill="var(--pine)"/>
+    <g fill="var(--mtn-mid)"><rect x="90" y="130" width="220" height="100"/><polygon points="80,132 200,80 320,132"/></g>
+    <g fill="var(--sun)"><rect x="115" y="155" width="26" height="30" rx="4"/><rect x="160" y="155" width="26" height="30" rx="4"/><rect x="214" y="155" width="26" height="30" rx="4"/><rect x="259" y="155" width="26" height="30" rx="4"/></g>
+    <rect x="186" y="195" width="28" height="35" fill="var(--maple)"/>
+    <g fill="var(--pine-dark)"><polygon points="30,240 50,170 70,240"/><polygon points="330,240 352,160 374,240"/></g>`,
+  mountains: `<rect width="400" height="300" fill="var(--sky-bot)"/><circle cx="300" cy="60" r="26" fill="var(--sun)"/>
+    <polygon fill="var(--mtn-far)" points="0,220 80,110 160,190 240,90 330,180 400,130 400,300 0,300"/>
+    <polygon fill="var(--snow)" points="240,90 220,118 236,114 246,124 256,112 266,116"/>
+    <polygon fill="var(--mtn-near)" points="0,260 100,170 200,250 300,180 400,250 400,300 0,300"/>
+    <path d="M0 270 Q 200 240 400 270 V300 H0Z" fill="var(--sky-top)" opacity=".8"/>
+    <g fill="var(--pine-dark)"><polygon points="40,280 56,220 72,280"/><polygon points="330,282 348,214 366,282"/></g>`,
+  home: `<rect width="400" height="300" fill="var(--sky-bot)"/><circle cx="200" cy="90" r="40" fill="var(--sun)"/>
+    <path d="M0 230 Q 100 190 200 220 T 400 210 V300 H0Z" fill="var(--pine)"/>
+    <g fill="var(--mtn-near)"><rect x="140" y="150" width="120" height="90"/><path d="M140 150 Q 200 90 260 150Z"/></g>
+    <rect x="186" y="190" width="28" height="50" rx="14" fill="var(--sun)"/>
+    <g><circle cx="60" cy="200" r="28" fill="var(--pine-dark)"/><rect x="56" y="220" width="8" height="30" fill="#7a4a2a"/>
+    <circle cx="50" cy="195" r="5" fill="var(--maple)"/><circle cx="70" cy="205" r="5" fill="var(--maple)"/><circle cx="62" cy="186" r="5" fill="var(--maple)"/></g>
+    <g><circle cx="340" cy="205" r="24" fill="var(--pine-dark)"/><rect x="336" y="222" width="8" height="26" fill="#7a4a2a"/>
+    <circle cx="332" cy="200" r="5" fill="var(--sun)"/><circle cx="350" cy="210" r="5" fill="var(--sun)"/></g>`
+};
+$("tripCards").innerHTML = DATA.trips.map((t) => `<article class="postcard">
+  <div class="art"><svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${SCENES[t.scene] || SCENES.city}</svg>
+    <span class="stamp">${esc(t.stamp)}<br>✈</span></div>
+  <div class="when">${esc(t.event)} · ${esc(t.when)}</div>
+  <h3>${esc(t.place)}</h3><p>${esc(t.note)}</p></article>`).join("");
+
+$("schedule").innerHTML = DATA.schedule.map((s) => `<div class="slot"><time>${esc(s.t)}</time>
+  <div><span class="kind">${esc(s.kind)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div></div>`).join("");
+$("tools").innerHTML = DATA.tools.map((t) => `<div class="tool"><b>${esc(t.name)}</b><span>${esc(t.type)}</span></div>`).join("");
+$("faqList").innerHTML = DATA.faq.map((f, i) => `<details id="faq-${i}"${i === 0 ? " open" : ""}><summary>${esc(f.q)}<span class="plus" aria-hidden="true">+</span></summary><p>${esc(f.a)}</p></details>`).join("");
+$("social").innerHTML = DATA.social.map((s) => `<a href="${esc(s.url)}" ${ext}>${esc(s.label)} ↗</a>`).join("");
+$("year").textContent = new Date().getFullYear();
+
+/* day / night toggle */
+const root = document.documentElement;
+function isDark() {
+  const t = root.getAttribute("data-theme");
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+try { const saved = localStorage.getItem("aa-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+$("themeBtn").addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  try { localStorage.setItem("aa-theme", next); } catch (e) {}
+});
+
+/* night-sky stars (only visible in dark) */
+(function stars() {
+  const c = $("stars"), ctx = c.getContext("2d");
+  function draw() {
+    const r = c.parentElement.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    c.width = r.width * d; c.height = r.height * d; c.style.width = r.width + "px"; c.style.height = r.height + "px";
+    ctx.scale(d, d); ctx.clearRect(0, 0, r.width, r.height);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < Math.round(r.width / 6); i++) {
+      ctx.globalAlpha = .3 + rnd() * .7; ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(rnd() * r.width, rnd() * r.height * .6, rnd() * 1.4 + .3, 0, 7); ctx.fill();
+    }
+  }
+  draw(); addEventListener("resize", draw);
+})();
+</script>
+</body>
+</html>

@@ -40,6 +40,9 @@ jobs:
       # Pages runs Jekyll by default, which drops _next/ directories.
       - run: touch alinoor/out/.nojekyll
 
+      # Personal website, served at /AliNoor/me/
+      - run: cp -r personal-site alinoor/out/me
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: alinoor/out
