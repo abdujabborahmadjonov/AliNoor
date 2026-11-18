@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Build used by a Vercel project that points at the repository root rather
-# than at alinoor/. The Supabase values below are the public client settings
-# (also in .github/workflows/deploy.yml); Vercel env vars override them.
+# Vercel build for this app. The repo-root vercel.json runs it both from
+# projects rooted at alinoor/ and from one rooted at the repository top, so it
+# must not assume the working directory. The Supabase values below are the
+# public client settings (also in .github/workflows/deploy.yml); Vercel env
+# vars override them.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://cgtetucceocbldqthgiw.supabase.co}"
