@@ -73,6 +73,46 @@ export const maghribDay = (settings: AppSettings, now: Date = new Date()) => {
   return { sequence, next, current }
 }
 
+// Where a planning day begins. Older saved settings have no value; they get
+// the calendar day, which is what most people expect.
+export const dayStart = (settings: AppSettings) =>
+  settings.dayStart === 'maghrib' ? 'maghrib' : 'midnight'
+
+// A calendar day in the city: that date's prayers in order, with the current
+// and next prayer reaching across midnight on either side.
+export const midnightDay = (settings: AppSettings, now: Date = new Date()) => {
+  const city = findCity(settings.city)
+  const [y, m, d] = dateInTz(city.tz, now).split('-').map(Number)
+  const prayers = (dy: number) =>
+    timesFor(settings, new Date(y, m - 1, d + dy, 12)).filter(
+      p => p.name !== 'Sunrise',
+    )
+  const sequence = prayers(0)
+  const around = [...prayers(-1), ...sequence, ...prayers(1)]
+  const next = around.find(p => p.time > now) || sequence[0]
+  // Before Fajr it is still the previous night's Isha.
+  const current = [...around].reverse().find(p => p.time <= now) || sequence[0]
+  return { sequence, next, current }
+}
+
+// The planning day around `now`, per the user's chosen day start.
+export const prayerDay = (settings: AppSettings, now: Date = new Date()) =>
+  dayStart(settings) === 'midnight'
+    ? midnightDay(settings, now)
+    : maghribDay(settings, now)
+
+// Which day tasks are filed under: the calendar date, or with Maghrib days
+// the date the current Islamic day ends on (same rule as the website).
+export const planningDay = (settings: AppSettings, now: Date = new Date()) => {
+  const city = findCity(settings.city)
+  if (dayStart(settings) === 'midnight') return dateInTz(city.tz, now)
+  // The day is named by the Maghrib that closes it: the next one after now.
+  const closing = [now, new Date(now.getTime() + 86_400_000)]
+    .flatMap(d => timesFor(settings, d))
+    .find(p => p.name === 'Maghrib' && p.time > now)
+  return dateInTz(city.tz, closing ? closing.time : now)
+}
+
 export const fmtTime = (d: Date, tz: string) => {
   try {
     return new Intl.DateTimeFormat('en-GB', {

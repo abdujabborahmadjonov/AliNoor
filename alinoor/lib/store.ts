@@ -32,6 +32,8 @@ export type AppSettings = {
   city: string
   method: 'MuslimWorldLeague' | 'ISNA' | 'Egyptian' | 'UmmAlQura' | 'Karachi'
   madhab: 'Hanafi' | 'Shafi'
+  // When a planning day begins: calendar midnight, or the Islamic day's Maghrib.
+  dayStart?: DayStart
   displayName: string
   adhanEnabled: boolean
   adhanVoice: string
@@ -62,6 +64,7 @@ export type Book = {
 
 import { supabase } from '@/lib/supabase'
 import type { AiModel } from '@/lib/ai-models'
+import type { DayStart } from '@/lib/day-start'
 
 // localStorage is the fast cache; when a user is signed in every write is
 // mirrored to the user_data table so laptop and phone see the same data.
@@ -266,6 +269,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   city: 'Tashkent',
   method: 'MuslimWorldLeague',
   madhab: 'Hanafi',
+  dayStart: 'midnight',
   displayName: '',
   adhanEnabled: false,
   adhanVoice: 'a1',

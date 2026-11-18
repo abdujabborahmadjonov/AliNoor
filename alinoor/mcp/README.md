@@ -20,7 +20,23 @@ change made here shows up there the next time the app loads.
 Maghrib to Maghrib and is named by the date it ends on, so the "after Maghrib"
 and "after Isha" tasks of 18 November happen on the evening of the 17th.
 
-## Setup
+## Use it from claude.ai or the Claude app
+
+The server is hosted at `https://alinoor.uz/api/mcp`, so there's nothing to
+install.
+
+1. In Claude, open **Settings → Connectors → Add custom connector**.
+2. Name it `AliNoor` and paste `https://alinoor.uz/api/mcp` as the URL.
+3. Click **Connect**. An AliNoor sign-in page opens; sign in with your AliNoor
+   email and password and allow access.
+
+Claude can then use the tools below in any chat (turn the connector on from
+the chat's tools menu). It acts as you through your own Supabase session, so it
+only ever sees your data; your password is checked once and never stored. To
+disconnect, remove the connector in Claude; changing your AliNoor password also
+ends its access.
+
+## Run it locally (Claude Desktop, Claude Code)
 
 1. Install dependencies once, in `alinoor/`:
 
@@ -62,8 +78,10 @@ after Fajr, two hours of study, gym after Asr".
 
 ## Notes
 
-- The password lives only in your client's config on your machine. The server
-  uses Supabase's public client key, and row-level security limits it to your
-  own rows.
+- Locally, the password lives only in your client's config on your machine.
+  Both servers use Supabase's public client key, and row-level security limits
+  them to your own rows.
+- The hosted server needs `MCP_SECRET` (a long random string) set on its Vercel
+  project; it seals the short-lived sign-in codes and refresh tokens.
 - If the website is open while you edit here, reload it before changing tasks
   there; otherwise the open tab can save its older copy over these edits.

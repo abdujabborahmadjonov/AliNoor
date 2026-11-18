@@ -8,6 +8,7 @@ import { betaTool } from '@anthropic-ai/sdk/helpers/beta/json-schema'
 import { ToolError } from '@anthropic-ai/sdk/lib/tools/ToolError'
 import type { AiModel } from '@/lib/ai-models'
 import { findCity } from '@/lib/cities'
+import { anchorOrder, dayRule } from '@/lib/day-start'
 import { fmtPlanningDayTimes } from '@/lib/prayer'
 import {
   SCHEDULE_TOOLS,
@@ -19,7 +20,7 @@ import {
 import type { AppSettings } from '@/lib/store'
 
 
-const SYSTEM = `You are the planner inside AliNoor, a Muslim daily-planning app. The user's day runs from Maghrib to Maghrib and is divided by the five prayers; every task sits after one of them (Maghrib, Isha, Fajr, Dhuhr, Asr). A day is named by the date it ends on: the tasks "after Maghrib" and "after Isha" for 2026-03-10 happen on the evening of 2026-03-09.
+const system = (settings: AppSettings) => `You are the planner inside AliNoor, a Muslim daily-planning app. Each day is divided by the five prayers, and every task sits after one of them (Fajr, Dhuhr, Asr, Maghrib, Isha). ${dayRule(settings)}
 
 Use the tools to read and change the schedule. To build or rework a day, read it first with list_tasks, then add, update or delete tasks so the result matches what the user asked. Place each task after the prayer whose window it fits, using the prayer times you are given or can look up, and keep the number of tasks realistic for the time between prayers. Don't remove or rename tasks the user didn't ask you to touch, and never mark a task done unless asked.
 
@@ -87,7 +88,8 @@ export const runPlanner = async ({
         const out = applyScheduleTool(
           current,
           t.name,
-          input as Record<string, unknown>
+          input as Record<string, unknown>,
+          anchorOrder(settings)
         )
         if (out.isError) throw new ToolError(out.result)
         current = out.tasks
@@ -103,14 +105,14 @@ export const runPlanner = async ({
     `Day open in the app: ${viewYmd}. Unless I name another day, I mean this one.`,
     `Prayer times for ${viewYmd}: ${fmtPlanningDayTimes(settings, viewYmd)}.`,
     '',
-    describeDay(current, viewYmd),
+    describeDay(current, viewYmd, anchorOrder(settings)),
   ].join('\n')
 
   const final = await client.beta.messages.toolRunner(
     {
       model,
       max_tokens: 16000,
-      system: SYSTEM,
+      system: system(settings),
       tools: [...scheduleTools, prayerTimesTool(settings)],
       output_config: { effort: 'medium' },
       max_iterations: 25,

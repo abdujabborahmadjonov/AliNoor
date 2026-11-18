@@ -8,6 +8,8 @@ export type AppSettings = {
   city: string
   method: 'MuslimWorldLeague' | 'ISNA' | 'Egyptian' | 'UmmAlQura' | 'Karachi'
   madhab: 'Hanafi' | 'Shafi'
+  // When a planning day begins: calendar midnight, or the Islamic day's Maghrib.
+  dayStart?: 'midnight' | 'maghrib'
   displayName: string
 }
 
@@ -23,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   city: 'Tashkent',
   method: 'MuslimWorldLeague',
   madhab: 'Hanafi',
+  dayStart: 'midnight',
   displayName: '',
 }
 
