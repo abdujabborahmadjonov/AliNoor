@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "if [ -d alinoor ]; then cd alinoor; fi; npm ci",
+  "buildCommand": "if [ -d alinoor ]; then bash alinoor/scripts/vercel-build.sh && rm -rf out && cp -r alinoor/out out; else bash scripts/vercel-build.sh; fi",
+  "outputDirectory": "out"
+}
