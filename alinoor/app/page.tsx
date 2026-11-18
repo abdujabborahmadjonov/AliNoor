@@ -5,7 +5,7 @@ import Link from 'next/link'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import PrayerRing from '@/app/components/PrayerRing'
 import { findCity } from '@/lib/cities'
-import { fmtTime, maghribDay, timesFor } from '@/lib/prayer'
+import { fmtTime, maghribDay, prayerDay, timesFor } from '@/lib/prayer'
 import { CATEGORY_DOT, loadSettings } from '@/lib/store'
 import type { AppSettings } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
@@ -57,6 +57,11 @@ export default function LandingPage() {
 
   const city = settings ? findCity(settings.city) : null
   const day = useMemo(
+    () => (settings ? prayerDay(settings, now) : null),
+    [settings, now]
+  )
+  // The Hijri date turns at Maghrib whichever day start the planner uses.
+  const islamicDay = useMemo(
     () => (settings ? maghribDay(settings, now) : null),
     [settings, now]
   )
@@ -73,11 +78,11 @@ export default function LandingPage() {
       return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
         day: 'numeric',
         month: 'long',
-      }).format(day ? day.end : now)
+      }).format(islamicDay ? islamicDay.end : now)
     } catch {
       return ''
     }
-  }, [day, now])
+  }, [islamicDay, now])
 
   return (
     <div className="min-h-screen bg-bg">
@@ -229,7 +234,7 @@ export default function LandingPage() {
                     <div key={`${p.name}${p.time.getTime()}`}>
                       <div
                         className={`flex items-center gap-4 border rounded-lg px-4 py-2.5 ${
-                          day.current.name === p.name
+                          day.current.time.getTime() === p.time.getTime()
                             ? 'border-ember/50'
                             : 'border-line'
                         }`}

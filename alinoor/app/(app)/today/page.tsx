@@ -9,7 +9,8 @@ import {
   TimedPrayer,
   countdown,
   fmtTime,
-  maghribDay,
+  dayStart,
+  prayerDay,
   minutesInTz,
   planningDay,
   timesFor,
@@ -248,15 +249,15 @@ export default function PageInner() {
     return () => clearInterval(t)
   }, [])
 
-  // Keyed to the Maghrib-to-Maghrib window, not the civil date: a task added
-  // after Maghrib belongs to the Islamic day that has already begun, and
-  // keying it to the civil date made it vanish at midnight.
+  // Keyed to the planning day: the calendar date, or with Maghrib days the
+  // Islamic day that has already begun, so a task added after Maghrib doesn't
+  // vanish at midnight.
   const todayYmd = settings ? planningDay(settings, now) : ''
   const viewYmd = selectedYmd || todayYmd
   const isToday = viewYmd === todayYmd
 
   // Prayer times for the viewed day: local noon of that date anchors the
-  // Maghrib-to-Maghrib window when browsing other days.
+  // day's window when browsing other days.
   const anchor = useMemo(() => {
     if (isToday || !viewYmd) return now
     const [y, m, d] = viewYmd.split('-').map(Number)
@@ -264,7 +265,7 @@ export default function PageInner() {
   }, [isToday, viewYmd, now])
 
   const day = useMemo(
-    () => (settings ? maghribDay(settings, anchor) : null),
+    () => (settings ? prayerDay(settings, anchor) : null),
     [settings, anchor]
   )
 
@@ -373,7 +374,8 @@ export default function PageInner() {
             }}
           />
           {day.sequence.map((p) => {
-            const isNow = isToday && day.current.name === p.name
+            const isNow =
+              isToday && day.current.time.getTime() === p.time.getTime()
             const anchorTasks = dayTasks.filter((t) => t.anchor === p.name)
             return (
               <div key={`${p.name}${p.time.getTime()}`}>
@@ -521,7 +523,9 @@ export default function PageInner() {
               done
             </p>
             <p className="font-hand text-xl text-mute mt-3">
-              the day runs Maghrib to Maghrib
+              {dayStart(settings) === 'maghrib'
+                ? 'the day runs Maghrib to Maghrib'
+                : 'the day runs midnight to midnight'}
             </p>
           </div>
         </div>

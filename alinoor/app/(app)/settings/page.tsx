@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import AppShell from '@/app/components/AppShell'
 import CityPicker from '@/app/components/CityPicker'
 import { findCity, utcOffsetLabel } from '@/lib/cities'
+import { dayStart } from '@/lib/day-start'
 import { supabase } from '@/lib/supabase'
 import { ADHAN_VOICES, adhanUrl } from '@/lib/adhan-audio'
 import { AI_MODELS } from '@/lib/ai-models'
@@ -205,6 +206,37 @@ export default function PageInner() {
                 affects Asr time
               </span>
             </div>
+          </div>
+
+          <div className="mt-5">
+            <label className="microlabel block mb-2">Day starts at</label>
+            <div className="flex flex-wrap gap-2 items-center">
+              {(
+                [
+                  ['midnight', 'Midnight', '00:00 – 23:59'],
+                  ['maghrib', 'Maghrib', 'the Islamic day'],
+                ] as const
+              ).map(([value, label, note]) => (
+                <button
+                  key={value}
+                  onClick={() => update({ dayStart: value })}
+                  aria-pressed={dayStart(settings) === value}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    dayStart(settings) === value
+                      ? 'bg-ink text-bg border-ink'
+                      : 'border-line text-ink2 hover:border-linestrong'
+                  }`}
+                >
+                  {label}
+                  <span className="opacity-70 font-normal"> · {note}</span>
+                </button>
+              ))}
+            </div>
+            <p className="font-hand text-lg text-mute mt-2">
+              {dayStart(settings) === 'maghrib'
+                ? 'each day opens at Maghrib, so its evening tasks fall the night before'
+                : 'each day is a calendar day; Maghrib and Isha are its evening'}
+            </p>
           </div>
         </section>
 

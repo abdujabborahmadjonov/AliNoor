@@ -20,6 +20,7 @@ import {
   saveKey,
   signOutAndClear,
 } from '../lib/store'
+import { dayStart } from '../lib/prayer'
 import { T } from '../lib/theme'
 
 const METHODS: Array<[AppSettings['method'], string]> = [
@@ -199,6 +200,36 @@ export default function SettingsScreen({
           ))}
         </View>
         <Text style={s.note}>affects Asr time</Text>
+      </View>
+
+      <View style={s.card}>
+        <Text style={s.heading}>DAY STARTS AT</Text>
+        <View style={s.rowGap}>
+          {(
+            [
+              ['midnight', 'Midnight · 00:00–23:59'],
+              ['maghrib', 'Maghrib · Islamic day'],
+            ] as const
+          ).map(([value, label]) => (
+            <TouchableOpacity
+              key={value}
+              style={[s.pill, dayStart(settings) === value && s.pillActive]}
+              onPress={() => update({ dayStart: value })}>
+              <Text
+                style={[
+                  s.pillText,
+                  dayStart(settings) === value && s.pillTextActive,
+                ]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={s.note}>
+          {dayStart(settings) === 'maghrib'
+            ? 'each day opens at Maghrib, so its evening tasks fall the night before'
+            : 'each day is a calendar day; Maghrib and Isha are its evening'}
+        </Text>
       </View>
         </>
       )}

@@ -13,7 +13,9 @@ import { findCity } from '../lib/cities'
 import {
   dateInTz,
   fmtTime,
-  maghribDay,
+  dayStart,
+  planningDay,
+  prayerDay,
   timesFor,
 } from '../lib/prayer'
 import {
@@ -138,18 +140,18 @@ export default function TodayScreen({ userId }: { userId: string }) {
   }, [load])
 
   const city = findCity(settings.city)
-  const todayYmd = dateInTz(city.tz, now)
+  const todayYmd = planningDay(settings, now)
   const viewYmd = selectedYmd || todayYmd
   const isToday = viewYmd === todayYmd
 
   // Prayer times for the viewed day (local noon anchors non-today windows).
   const day = useMemo(() => {
-    if (isToday) return maghribDay(settings, now)
+    if (isToday) return prayerDay(settings, now)
     const [y, m, d] = viewYmd.split('-').map(Number)
-    return maghribDay(settings, new Date(y, m - 1, d, 12, 0, 0))
+    return prayerDay(settings, new Date(y, m - 1, d, 12, 0, 0))
   }, [settings, now, viewYmd, isToday])
 
-  const live = useMemo(() => maghribDay(settings, now), [settings, now])
+  const live = useMemo(() => prayerDay(settings, now), [settings, now])
   const ringTimes = useMemo(() => timesFor(settings, now), [settings, now])
   const dayTasks = tasks.filter(t => t.date === viewYmd)
   const doneCount = dayTasks.filter(t => t.done).length
@@ -238,7 +240,8 @@ export default function TodayScreen({ userId }: { userId: string }) {
 
       {/* TIMELINE */}
       {day.sequence.map(p => {
-        const isNow = isToday && day.current.name === p.name
+        const isNow =
+          isToday && day.current.time.getTime() === p.time.getTime()
         const anchorTasks = dayTasks.filter(t => t.anchor === p.name)
         return (
           <View key={`${p.name}${p.time.getTime()}`}>
@@ -331,7 +334,11 @@ export default function TodayScreen({ userId }: { userId: string }) {
         <Text style={s.progressText}>
           {doneCount} of {dayTasks.length} tasks done
         </Text>
-        <Text style={s.hand}>the day runs Maghrib to Maghrib</Text>
+        <Text style={s.hand}>
+          {dayStart(settings) === 'maghrib'
+            ? 'the day runs Maghrib to Maghrib'
+            : 'the day runs midnight to midnight'}
+        </Text>
       </View>
 
       <View style={{ height: 30 }} />

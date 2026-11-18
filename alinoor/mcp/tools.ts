@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { findCity } from '../lib/cities'
 import { addDays } from '../lib/dates'
+import { anchorOrder, dayRule } from '../lib/day-start'
 import { fmtPlanningDayTimes, planningDay } from '../lib/prayer'
 import {
   ANCHORS,
@@ -106,7 +107,7 @@ export const createAliNoorServer = (
     {
       title: 'Today in AliNoor',
       description:
-        "Today's planning day in AliNoor (days run Maghrib to Maghrib and are named by the date they end on), the user's city, prayer times and planned tasks.",
+        "Today's planning day in AliNoor, how the user's days run (calendar days, or Maghrib to Maghrib), their city, prayer times and planned tasks.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -117,10 +118,11 @@ export const createAliNoorServer = (
       const times = fmtPlanningDayTimes(settings, date)
       return [
         `Planning day: ${date} (tomorrow: ${addDays(date, 1)})`,
+        dayRule(settings),
         `City: ${city.name}, ${city.country} (${city.tz})`,
         `Prayer times: ${times}`,
         '',
-        describeDay(await loadTasks(), date),
+        describeDay(await loadTasks(), date, anchorOrder(settings)),
       ].join('\n')
     })
   )
@@ -130,7 +132,7 @@ export const createAliNoorServer = (
     {
       title: 'Prayer times',
       description:
-        "Prayer times for a planning day in the user's city and local time. The day opens with the Maghrib and Isha of the evening before.",
+        "Prayer times for a planning day in the user's city and local time. With Maghrib days, the day opens with the Maghrib and Isha of the evening before.",
       inputSchema: { date: dateArg },
       annotations: { readOnlyHint: true },
     },
@@ -148,7 +150,12 @@ export const createAliNoorServer = (
   // Each edit reads the latest list, changes it and writes it back, so edits
   // made in the app between calls are kept.
   const edit = async (name: string, input: Record<string, unknown>) => {
-    const out = applyScheduleTool(await loadTasks(), name, input)
+    const out = applyScheduleTool(
+      await loadTasks(),
+      name,
+      input,
+      anchorOrder(await loadSettings())
+    )
     if (out.isError) throw new Error(out.result)
     if (out.change) await writeKey('alinoor_tasks', out.tasks)
     return out.result
@@ -163,7 +170,11 @@ export const createAliNoorServer = (
       annotations: { readOnlyHint: true },
     },
     guard(async ({ date }: { date?: string }) =>
-      describeDay(await loadTasks(), await resolveDate(date))
+      describeDay(
+        await loadTasks(),
+        await resolveDate(date),
+        anchorOrder(await loadSettings())
+      )
     )
   )
 

@@ -4,9 +4,12 @@ import {
   Madhab,
   PrayerTimes,
 } from 'adhan'
-import { findCity } from './cities'
+import { findCity, utcOffsetMinutes } from './cities'
 import { dateInTz } from './dates'
+import { dayStart } from './day-start'
 import type { AppSettings } from './store'
+
+export { dayStart }
 
 export type PrayerName = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
 
@@ -70,7 +73,8 @@ export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
   return timesForYmd(settings, y, m, d)
 }
 
-// Every prayer of one planning day: the evening that opens it (Maghrib, Isha
+// Every prayer of one planning day. Midnight days hold that date's own
+// prayers. Maghrib days hold the evening that opens it (Maghrib, Isha
 // of the date before), that date's daytime prayers, and the Maghrib that
 // closes it.
 export const planningDayTimes = (
@@ -78,6 +82,7 @@ export const planningDayTimes = (
   ymd: string
 ): TimedPrayer[] => {
   const [y, m, d] = ymd.split('-').map(Number)
+  if (dayStart(settings) === 'midnight') return timesForYmd(settings, y, m, d)
   const eve = timesForYmd(settings, y, m, d - 1).filter(
     (p) => p.name === 'Maghrib' || p.name === 'Isha'
   )
@@ -92,7 +97,13 @@ export const fmtPlanningDayTimes = (settings: AppSettings, ymd: string) => {
   return times
     .map((p, i) => {
       const note =
-        i < 2 ? ' (evening before)' : i === times.length - 1 ? ' (day ends)' : ''
+        dayStart(settings) === 'midnight'
+          ? ''
+          : i < 2
+            ? ' (evening before)'
+            : i === times.length - 1
+              ? ' (day ends)'
+              : ''
       return `${p.name}${note} ${fmtTime(p.time, tz)}`
     })
     .join(', ')
@@ -139,15 +150,46 @@ export const maghribDay = (settings: AppSettings, now: Date = new Date()) => {
   return { sequence, next, current, start: start.time, end: end.time }
 }
 
+// A calendar day, 00:00 to 23:59 in the city: that date's prayers in order,
+// with the current and next prayer reaching across midnight on either side.
+export const midnightDay = (settings: AppSettings, now: Date = new Date()) => {
+  const city = findCity(settings.city)
+  const [y, m, d] = ymdParts(city.tz, now)
+  const prayers = (dy: number) =>
+    timesForYmd(settings, y, m, d + dy).filter((p) => p.name !== 'Sunrise')
+  const sequence = prayers(0)
+  const around = [...prayers(-1), ...sequence, ...prayers(1)]
+
+  const next = around.find((p) => p.time > now) || sequence[0]
+  // Before Fajr it is still the previous night's Isha.
+  const current =
+    [...around].reverse().find((p) => p.time <= now) || sequence[0]
+
+  const midnight = (dy: number) => {
+    const utcMidnight = Date.UTC(y, m - 1, d + dy)
+    const offset = utcOffsetMinutes(city.tz, new Date(utcMidnight)) ?? 0
+    return new Date(utcMidnight - offset * 60_000)
+  }
+
+  return { sequence, next, current, start: midnight(0), end: midnight(1) }
+}
+
+// The planning day around `now`, per the user's chosen day start.
+export const prayerDay = (settings: AppSettings, now: Date = new Date()) =>
+  dayStart(settings) === 'midnight'
+    ? midnightDay(settings, now)
+    : maghribDay(settings, now)
+
 // The single source of truth for "which day am I planning?". Tasks, habit logs
-// and statistics must all agree, so they all key off the Maghrib-to-Maghrib
-// window's closing date rather than the civil date — otherwise anything entered
-// between Maghrib and midnight lands on the previous day and appears to vanish.
+// and statistics must all agree. With Maghrib days they key off the window's
+// closing date rather than the civil date, so anything entered between Maghrib
+// and midnight doesn't land on the previous day and appear to vanish.
 export const planningDay = (
   settings: AppSettings,
   now: Date = new Date()
 ): string => {
   const city = findCity(settings.city)
+  if (dayStart(settings) === 'midnight') return dateInTz(city.tz, now)
   const day = maghribDay(settings, now)
   return dateInTz(city.tz, day ? day.end : now)
 }

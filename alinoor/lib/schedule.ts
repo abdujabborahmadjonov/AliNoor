@@ -1,17 +1,16 @@
-// The daily schedule: tasks hung after each prayer of a Maghrib-to-Maghrib
-// day. Pure functions only (no browser, no Supabase), so the in-app AI planner
+// The daily schedule: tasks hung after each prayer of a planning day (a
+// calendar day, or Maghrib to Maghrib if the user chose that). Pure functions only (no browser, no Supabase), so the in-app AI planner
 // and the MCP server edit the schedule through exactly the same rules.
 
 export type Task = {
   id: string
-  date: string // yyyy-mm-dd: the planning day (the Maghrib that closes it)
+  date: string // yyyy-mm-dd: the planning day (with Maghrib days, the one it ends on)
   anchor: string // prayer name the task follows
   title: string
   done: boolean
 }
 
-// In day order: the day opens at Maghrib, so Maghrib and Isha come first.
-export const ANCHORS = ['Maghrib', 'Isha', 'Fajr', 'Dhuhr', 'Asr'] as const
+export const ANCHORS = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const
 export type Anchor = (typeof ANCHORS)[number]
 
 export const uid = () =>
@@ -30,19 +29,19 @@ const isAnchor = (v: unknown): v is Anchor =>
 const cleanTitle = (v: unknown) =>
   typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, 200) : ''
 
-export const tasksForDay = (tasks: Task[], date: string) =>
+// Prayers in the order the day meets them (calendar order unless given).
+type Order = readonly string[]
+
+export const tasksForDay = (tasks: Task[], date: string, order: Order = ANCHORS) =>
   tasks
     .filter((t) => t.date === date)
-    .sort(
-      (a, b) =>
-        ANCHORS.indexOf(a.anchor as Anchor) - ANCHORS.indexOf(b.anchor as Anchor)
-    )
+    .sort((a, b) => order.indexOf(a.anchor) - order.indexOf(b.anchor))
 
 // A plain-text view of one day, for the model and for MCP clients.
-export const describeDay = (tasks: Task[], date: string) => {
-  const day = tasksForDay(tasks, date)
+export const describeDay = (tasks: Task[], date: string, order: Order = ANCHORS) => {
+  const day = tasksForDay(tasks, date, order)
   if (day.length === 0) return `${date}: no tasks yet.`
-  const lines = ANCHORS.flatMap((a) => {
+  const lines = order.flatMap((a) => {
     const at = day.filter((t) => t.anchor === a)
     if (at.length === 0) return []
     return [
@@ -142,12 +141,13 @@ const fail = (tasks: Task[], result: string): ToolOutcome => ({
 export const applyScheduleTool = (
   tasks: Task[],
   name: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  order: Order = ANCHORS
 ): ToolOutcome => {
   switch (name) {
     case 'list_tasks': {
       if (!isYmd(input.date)) return fail(tasks, 'date must be yyyy-mm-dd')
-      return { tasks, result: describeDay(tasks, input.date), isError: false }
+      return { tasks, result: describeDay(tasks, input.date, order), isError: false }
     }
 
     case 'add_task': {
