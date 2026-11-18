@@ -1,5 +1,5 @@
 // OAuth dynamic client registration (RFC 7591), stateless.
-import { Req, Res, json, readBody, seal } from '../../mcp/oauth'
+import { Req, Res, json, readBody, seal } from '../oauth'
 
 export default async function handler(req: Req, res: Res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' })

@@ -3,8 +3,8 @@
 // obtained through the OAuth flow in api/oauth/.
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { createClient } from '@supabase/supabase-js'
-import { SUPABASE_ANON_KEY, SUPABASE_URL, createAliNoorServer } from '../mcp/tools'
-import { Req, Res, json, origin, readBody } from '../mcp/oauth'
+import { SUPABASE_ANON_KEY, SUPABASE_URL, createAliNoorServer } from '../tools'
+import { Req, Res, json, origin, readBody } from '../oauth'
 
 export default async function handler(req: Req, res: Res) {
   const unauthorized = (why: string) =>

@@ -1,6 +1,6 @@
 // Serves /.well-known/oauth-authorization-server and
 // /.well-known/oauth-protected-resource (rewritten here by vercel.json).
-import { Req, Res, json, metadata, origin, queryOf, resourceMetadata } from '../../mcp/oauth'
+import { Req, Res, json, metadata, origin, queryOf, resourceMetadata } from '../oauth'
 
 export default function handler(req: Req, res: Res) {
   const base = origin(req)

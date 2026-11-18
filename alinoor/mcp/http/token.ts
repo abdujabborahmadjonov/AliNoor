@@ -1,8 +1,8 @@
 // OAuth token endpoint: trades a sealed code (with PKCE) or a sealed refresh
 // token for the user's Supabase access token, refreshing it with Supabase.
 import { createClient } from '@supabase/supabase-js'
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../mcp/tools'
-import { CODE_TTL_MS, Req, Res, json, readBody, s256, seal, unseal } from '../../mcp/oauth'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../tools'
+import { CODE_TTL_MS, Req, Res, json, readBody, s256, seal, unseal } from '../oauth'
 
 type Code = { t: 'code'; at: string; rt: string; exp?: number; cc: string; ru: string; cid: string; iat: number }
 type Refresh = { t: 'refresh'; rt: string; cid: string }

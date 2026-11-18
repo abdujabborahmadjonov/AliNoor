@@ -2,8 +2,8 @@
 // Supabase once, and sends the user back to the client with a short-lived
 // sealed code holding their Supabase session.
 import { createClient } from '@supabase/supabase-js'
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../mcp/tools'
-import { Req, Res, parseClient, queryOf, readBody, seal } from '../../mcp/oauth'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../tools'
+import { Req, Res, parseClient, queryOf, readBody, seal } from '../oauth'
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
