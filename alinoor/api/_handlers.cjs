@@ -22,6 +22,7 @@ var handlers_exports = {};
 __export(handlers_exports, {
   mcp: () => handler,
   oauthAuthorize: () => handler4,
+  oauthComplete: () => handler6,
   oauthMetadata: () => handler2,
   oauthRegister: () => handler3,
   oauthToken: () => handler5
@@ -1536,6 +1537,23 @@ var resourceMetadata = (base) => ({
   bearer_methods_supported: ["header"],
   resource_name: "AliNoor"
 });
+var PENDING_TTL_MS = 15 * 60 * 1e3;
+var codeRedirect = (p, session) => {
+  const code = seal({
+    t: "code",
+    at: session.access_token,
+    rt: session.refresh_token,
+    exp: session.expires_at,
+    cc: p.code_challenge,
+    ru: p.redirect_uri,
+    cid: p.client_id,
+    iat: Date.now()
+  });
+  const back = new URL(p.redirect_uri);
+  back.searchParams.set("code", code);
+  if (p.state) back.searchParams.set("state", p.state);
+  return back.toString();
+};
 
 // mcp/http/mcp.ts
 async function handler(req, res) {
@@ -1593,7 +1611,7 @@ async function handler3(req, res) {
 // mcp/http/authorize.ts
 var import_supabase_js2 = require("@supabase/supabase-js");
 var esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-var page = (p, clientHost, error = "") => `<!doctype html>
+var page = (p, clientHost, googleHref, error = "") => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Connect AliNoor</title>
 <style>
@@ -1606,16 +1624,19 @@ label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase
 input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);font:inherit}
 button{margin-top:20px;width:100%;padding:11px;border:0;border-radius:9px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
 .err{color:var(--ember);font-size:14px;margin-top:14px}.note{font-size:12px;margin-top:16px}
+.google{display:block;text-align:center;padding:11px;border:1px solid var(--line);border-radius:9px;color:var(--ink);text-decoration:none;font-weight:600}
+.or{display:flex;align-items:center;gap:10px;color:var(--ink3);font-size:12px;margin:18px 0 0}.or::before,.or::after{content:'';flex:1;border-top:1px solid var(--line)}
 </style></head><body>
 <form method="post">
 <h1>Connect AliNoor</h1>
 <p><strong>${esc(clientHost)}</strong> wants to read and edit your AliNoor daily schedule.</p>
+<a class="google" href="${esc(googleHref)}">Continue with Google</a>
+<div class="or">or with email</div>
 ${Object.entries(p).map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`).join("")}
 <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required>
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
 ${error ? `<div class="err">${esc(error)}</div>` : ""}
 <button type="submit">Allow access</button>
-<p class="note">Signed up with Google? Set a password with "Forgot password" on the AliNoor login page first.</p>
 </form></body></html>`;
 var PARAMS = ["response_type", "client_id", "redirect_uri", "state", "code_challenge", "code_challenge_method", "scope", "resource"];
 async function handler4(req, res) {
@@ -1634,6 +1655,9 @@ async function handler4(req, res) {
   if (!p.code_challenge || p.code_challenge_method !== "S256")
     return fail2(400, "PKCE with S256 is required.");
   const clientHost = new URL(p.redirect_uri).host;
+  const googleHref = `/connect/?r=${encodeURIComponent(
+    seal({ t: "pending", p, host: clientHost, iat: Date.now() })
+  )}`;
   const html = (error2 = "", status = 200) => {
     res.writeHead(status, {
       "content-type": "text/html; charset=utf-8",
@@ -1641,7 +1665,7 @@ async function handler4(req, res) {
       "x-frame-options": "DENY",
       "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
     });
-    res.end(page(p, clientHost, error2));
+    res.end(page(p, clientHost, googleHref, error2));
   };
   if (req.method !== "POST") return html();
   const email = typeof src.email === "string" ? src.email.trim() : "";
@@ -1651,20 +1675,8 @@ async function handler4(req, res) {
   });
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.session) return html("That email and password didn\u2019t match an AliNoor account.", 401);
-  const code = seal({
-    t: "code",
-    at: data.session.access_token,
-    rt: data.session.refresh_token,
-    exp: data.session.expires_at,
-    cc: p.code_challenge,
-    ru: p.redirect_uri,
-    cid: p.client_id,
-    iat: Date.now()
-  });
-  const back = new URL(p.redirect_uri);
-  back.searchParams.set("code", code);
-  if (p.state) back.searchParams.set("state", p.state);
-  res.writeHead(302, { location: back.toString(), "cache-control": "no-store" });
+  const location = codeRedirect(p, data.session);
+  res.writeHead(302, { location, "cache-control": "no-store" });
   res.end();
 }
 
@@ -1704,10 +1716,46 @@ async function handler5(req, res) {
   }
   return bad("unsupported_grant_type", "Use authorization_code or refresh_token.");
 }
+
+// mcp/http/complete.ts
+var import_supabase_js4 = require("@supabase/supabase-js");
+var pendingFrom = (r) => {
+  const pending = typeof r === "string" ? unseal(r) : null;
+  if (!pending || pending.t !== "pending") return null;
+  if (Date.now() - pending.iat > PENDING_TTL_MS) return null;
+  return pending;
+};
+async function handler6(req, res) {
+  if (req.method === "GET") {
+    const pending2 = pendingFrom(queryOf(req).r);
+    if (!pending2) return json(res, 400, { error: "This sign-in link expired. Start again from Claude." });
+    return json(res, 200, { host: pending2.host });
+  }
+  if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+  const b = await readBody(req);
+  const pending = pendingFrom(b.r);
+  if (!pending) return json(res, 400, { error: "This sign-in link expired. Start again from Claude." });
+  if (!b.access_token || !b.refresh_token)
+    return json(res, 400, { error: "Missing session." });
+  const supabase = (0, import_supabase_js4.createClient)(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  const { data, error } = await supabase.auth.getUser(b.access_token);
+  if (error || !data.user) return json(res, 401, { error: "Google sign-in didn\u2019t produce a valid AliNoor session." });
+  const exp = Number(b.expires_at);
+  return json(res, 200, {
+    redirect: codeRedirect(pending.p, {
+      access_token: b.access_token,
+      refresh_token: b.refresh_token,
+      expires_at: Number.isFinite(exp) ? exp : void 0
+    })
+  });
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   mcp,
   oauthAuthorize,
+  oauthComplete,
   oauthMetadata,
   oauthRegister,
   oauthToken
