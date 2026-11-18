@@ -8,4 +8,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://cgtetucceocbldqthgiw.supabase.co}"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNndGV0dWNjZW9jYmxkcXRoZ2l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1Njc1NzYsImV4cCI6MjA4NTE0MzU3Nn0.NGJ4sSE3kA1KPzTnUokEObM7EB-_okf3O_KRd7KFJ1s}"
+npm run -s build:api
 npx next build

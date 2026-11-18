@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "mcp": "tsx mcp/server.ts"
+    "mcp": "tsx mcp/server.ts",
+    "build:api": "esbuild mcp/handlers.ts --bundle --platform=node --format=cjs --target=node20 --outfile=api/_handlers.cjs --external:@supabase/supabase-js --external:@modelcontextprotocol/sdk --external:zod --legal-comments=none --log-level=warning"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.10.0",
@@ -25,6 +26,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.17",
+    "esbuild": "^0.28.2",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.23.15",

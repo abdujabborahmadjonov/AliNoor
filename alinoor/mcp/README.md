@@ -22,11 +22,11 @@ and "after Isha" tasks of 18 November happen on the evening of the 17th.
 
 ## Use it from claude.ai or the Claude app
 
-The server is hosted at `https://alinoor.uz/api/mcp`, so there's nothing to
+The server is hosted at `https://www.alinoor.uz/api/mcp`, so there's nothing to
 install.
 
 1. In Claude, open **Settings → Connectors → Add custom connector**.
-2. Name it `AliNoor` and paste `https://alinoor.uz/api/mcp` as the URL.
+2. Name it `AliNoor` and paste `https://www.alinoor.uz/api/mcp` as the URL.
 3. Click **Connect**. An AliNoor sign-in page opens; sign in with your AliNoor
    email and password and allow access.
 
