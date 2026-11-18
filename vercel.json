@@ -3,5 +3,23 @@
   "framework": null,
   "installCommand": "if [ -d alinoor ]; then cd alinoor; fi; npm ci",
   "buildCommand": "if [ -d alinoor ]; then bash alinoor/scripts/vercel-build.sh && rm -rf out && cp -r alinoor/out out; else bash scripts/vercel-build.sh; fi",
-  "outputDirectory": "out"
+  "outputDirectory": "out",
+  "rewrites": [
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/oauth/metadata"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server/:path*",
+      "destination": "/api/oauth/metadata"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource",
+      "destination": "/api/oauth/metadata?kind=resource"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/:path*",
+      "destination": "/api/oauth/metadata?kind=resource"
+    }
+  ]
 }

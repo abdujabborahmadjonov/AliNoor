@@ -4,9 +4,9 @@ import {
   Madhab,
   PrayerTimes,
 } from 'adhan'
-import { findCity } from '@/lib/cities'
-import { dateInTz } from '@/lib/dates'
-import type { AppSettings } from '@/lib/store'
+import { findCity } from './cities'
+import { dateInTz } from './dates'
+import type { AppSettings } from './store'
 
 export type PrayerName = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
 
