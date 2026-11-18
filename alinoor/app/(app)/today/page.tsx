@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import AppShell from '@/app/components/AppShell'
 import PrayerRing from '@/app/components/PrayerRing'
 import { City, findCity } from '@/lib/cities'
@@ -13,14 +14,136 @@ import {
   planningDay,
   timesFor,
 } from '@/lib/prayer'
+import { ScheduleChange, invertChanges, replayChanges } from '@/lib/schedule'
 import {
   AppSettings,
   Task,
+  loadAiSettings,
   loadSettings,
   loadTasks,
   saveTasks,
   uid,
 } from '@/lib/store'
+
+type PlannerState =
+  | { kind: 'idle' }
+  | { kind: 'busy' }
+  | { kind: 'nokey' }
+  | { kind: 'error'; text: string }
+  | { kind: 'done'; text: string; changes: ScheduleChange[] }
+
+const changeLabel = (c: ScheduleChange) =>
+  c.kind === 'added'
+    ? `+ ${c.task.title} · after ${c.task.anchor}`
+    : c.kind === 'deleted'
+      ? `− ${c.task.title}`
+      : `~ ${c.after.title} · after ${c.after.anchor}${c.after.date !== c.before.date ? ` on ${c.after.date}` : ''}`
+
+// Describe a day in words and let Claude plan or rework it.
+function AiPlanner({
+  onRun,
+  onUndo,
+  state,
+  onStop,
+}: {
+  onRun: (prompt: string) => void
+  onUndo: (changes: ScheduleChange[]) => void
+  onStop: () => void
+  state: PlannerState
+}) {
+  const [prompt, setPrompt] = useState('')
+  const busy = state.kind === 'busy'
+
+  return (
+    <div className="bg-panel border border-line rounded-xl p-5 shadow-card mb-5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (prompt.trim() && !busy) onRun(prompt.trim())
+        }}
+      >
+        <label htmlFor="ai-prompt" className="microlabel block mb-2">
+          plan with AI
+        </label>
+        <textarea
+          id="ai-prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              if (prompt.trim() && !busy) onRun(prompt.trim())
+            }
+          }}
+          rows={2}
+          disabled={busy}
+          placeholder="e.g. Plan a study day: Quran after Fajr, 3 hours of coursework, gym after Asr"
+          className="w-full px-3 py-2 text-sm border border-line rounded-lg bg-panel text-ink placeholder:text-faint focus:outline-none focus:border-linestrong resize-y disabled:opacity-60"
+        />
+        <div className="flex items-center gap-3 mt-2">
+          {busy ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="px-4 py-2 border border-line rounded-lg text-xs font-medium text-ink2 hover:border-linestrong"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!prompt.trim()}
+              className="px-4 py-2 bg-ink text-bg rounded-lg text-xs font-medium disabled:opacity-40"
+            >
+              Plan
+            </button>
+          )}
+          {busy && (
+            <span className="font-mono text-[11px] text-mute flex items-center gap-2">
+              <span className="w-3 h-3 border-2 border-ink3 border-t-transparent rounded-full animate-spin" />
+              planning…
+            </span>
+          )}
+        </div>
+      </form>
+
+      {state.kind === 'nokey' && (
+        <p className="text-sm text-ink3 mt-3">
+          Add your Anthropic API key in{' '}
+          <Link href="/settings" className="text-ink underline">
+            Settings
+          </Link>{' '}
+          to use the planner.
+        </p>
+      )}
+      {state.kind === 'error' && (
+        <p className="text-sm text-ember mt-3">{state.text}</p>
+      )}
+      {state.kind === 'done' && (
+        <div className="mt-3 space-y-2">
+          {state.text && (
+            <p className="text-sm text-ink2 whitespace-pre-line">{state.text}</p>
+          )}
+          {state.changes.length > 0 && (
+            <>
+              <ul className="font-mono text-[11px] text-ink3 space-y-0.5">
+                {state.changes.map((c, i) => (
+                  <li key={i}>{changeLabel(c)}</li>
+                ))}
+              </ul>
+              <button
+                onClick={() => onUndo(state.changes)}
+                className="px-3 py-1.5 rounded-lg border border-line font-mono text-[11px] text-ink3 hover:text-ink hover:border-linestrong transition-colors"
+              >
+                undo these changes
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Month calendar (Monday-first): today filled, selected ringed, any day
 // tappable to plan that day.
@@ -109,6 +232,14 @@ export default function PageInner() {
   const [addingAfter, setAddingAfter] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [selectedYmd, setSelectedYmd] = useState('')
+  const [planner, setPlanner] = useState<PlannerState>({ kind: 'idle' })
+  const plannerAbort = useRef<AbortController | null>(null)
+  // The planner finishes asynchronously; it must merge into the task list as
+  // it is then, not as it was when the run started.
+  const tasksRef = useRef<Task[]>([])
+  tasksRef.current = tasks
+
+  useEffect(() => () => plannerAbort.current?.abort(), [])
 
   useEffect(() => {
     setSettings(loadSettings())
@@ -158,6 +289,40 @@ export default function PageInner() {
     saveTasks(next)
   }
 
+  const applyChanges = (changes: ScheduleChange[]) =>
+    persist(replayChanges(tasksRef.current, changes))
+
+  const runPlanner = async (prompt: string) => {
+    const ai = loadAiSettings()
+    if (!ai.apiKey) return setPlanner({ kind: 'nokey' })
+    const abort = new AbortController()
+    plannerAbort.current = abort
+    setPlanner({ kind: 'busy' })
+    // Loaded on demand so the SDK isn't in the page's first download.
+    const { runPlanner: run, plannerErrorMessage } = await import(
+      '@/lib/ai-planner'
+    )
+    try {
+      const result = await run({
+        apiKey: ai.apiKey,
+        model: ai.model,
+        prompt,
+        tasks: tasksRef.current,
+        settings,
+        viewYmd,
+        todayYmd,
+        signal: abort.signal,
+      })
+      if (abort.signal.aborted) return
+      applyChanges(result.changes)
+      setPlanner({ kind: 'done', text: result.reply, changes: result.changes })
+    } catch (err) {
+      setPlanner({ kind: 'error', text: plannerErrorMessage(err) })
+    } finally {
+      if (plannerAbort.current === abort) plannerAbort.current = null
+    }
+  }
+
   const addTask = (anchor: string) => {
     if (!draft.trim()) return
     persist([
@@ -198,6 +363,15 @@ export default function PageInner() {
       <div className="grid lg:grid-cols-[1fr_280px] gap-8">
         {/* TIMELINE */}
         <div className="space-y-1">
+          <AiPlanner
+            state={planner}
+            onRun={runPlanner}
+            onStop={() => plannerAbort.current?.abort()}
+            onUndo={(changes) => {
+              applyChanges(invertChanges(changes))
+              setPlanner({ kind: 'idle' })
+            }}
+          />
           {day.sequence.map((p) => {
             const isNow = isToday && day.current.name === p.name
             const anchorTasks = dayTasks.filter((t) => t.anchor === p.name)

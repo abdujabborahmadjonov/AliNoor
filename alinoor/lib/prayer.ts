@@ -5,7 +5,7 @@ import {
   PrayerTimes,
 } from 'adhan'
 import { findCity } from '@/lib/cities'
-import { dateInTz } from '@/lib/store'
+import { dateInTz } from '@/lib/dates'
 import type { AppSettings } from '@/lib/store'
 
 export type PrayerName = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha'
@@ -68,6 +68,34 @@ export const timesFor = (settings: AppSettings, date: Date): TimedPrayer[] => {
   const city = findCity(settings.city)
   const [y, m, d] = ymdParts(city.tz, date)
   return timesForYmd(settings, y, m, d)
+}
+
+// Every prayer of one planning day: the evening that opens it (Maghrib, Isha
+// of the date before), that date's daytime prayers, and the Maghrib that
+// closes it.
+export const planningDayTimes = (
+  settings: AppSettings,
+  ymd: string
+): TimedPrayer[] => {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const eve = timesForYmd(settings, y, m, d - 1).filter(
+    (p) => p.name === 'Maghrib' || p.name === 'Isha'
+  )
+  const day = timesForYmd(settings, y, m, d).filter((p) => p.name !== 'Isha')
+  return [...eve, ...day]
+}
+
+// "Maghrib (evening before) 17:40, Isha (evening before) 18:53, Fajr 05:20, …"
+export const fmtPlanningDayTimes = (settings: AppSettings, ymd: string) => {
+  const tz = findCity(settings.city).tz
+  const times = planningDayTimes(settings, ymd)
+  return times
+    .map((p, i) => {
+      const note =
+        i < 2 ? ' (evening before)' : i === times.length - 1 ? ' (day ends)' : ''
+      return `${p.name}${note} ${fmtTime(p.time, tz)}`
+    })
+    .join(', ')
 }
 
 // The Islamic day runs Maghrib to Maghrib: the sequence starts at the most

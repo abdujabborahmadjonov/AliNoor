@@ -38,13 +38,8 @@ export type AppSettings = {
   adhanPrayers: Record<AdhanPrayer, boolean>
 }
 
-export type Task = {
-  id: string
-  date: string // yyyy-mm-dd in the city's timezone
-  anchor: string // prayer name the task follows
-  title: string
-  done: boolean
-}
+export type { Task } from '@/lib/schedule'
+import type { Task } from '@/lib/schedule'
 
 export type Habit = {
   id: string
@@ -66,6 +61,7 @@ export type Book = {
 }
 
 import { supabase } from '@/lib/supabase'
+import type { AiModel } from '@/lib/ai-models'
 
 // localStorage is the fast cache; when a user is signed in every write is
 // mirrored to the user_data table so laptop and phone see the same data.
@@ -132,6 +128,7 @@ export const clearLocalData = () => {
       window.localStorage.removeItem(stampKey(key))
     }
     window.localStorage.removeItem(OWNER_KEY)
+    window.localStorage.removeItem(AI_KEY)
   } catch {}
 }
 
@@ -297,6 +294,32 @@ export const loadSettings = (): AppSettings => {
 }
 export const saveSettings = (s: AppSettings) => write('alinoor_settings', s)
 
+// The Anthropic API key and model for the AI planner. Deliberately not in
+// SYNC_KEYS: a secret key stays in this browser and never goes to Supabase,
+// and signing out removes it.
+const AI_KEY = 'alinoor_ai'
+
+export type AiSettings = {
+  apiKey: string
+  model: AiModel
+}
+
+export const DEFAULT_AI_SETTINGS: AiSettings = {
+  apiKey: '',
+  model: 'claude-sonnet-5-5',
+}
+
+export const loadAiSettings = (): AiSettings => ({
+  ...DEFAULT_AI_SETTINGS,
+  ...read<Partial<AiSettings>>(AI_KEY, {}),
+})
+
+export const saveAiSettings = (a: AiSettings) => {
+  try {
+    window.localStorage.setItem(AI_KEY, JSON.stringify(a))
+  } catch {}
+}
+
 export const loadTasks = () => read<Task[]>('alinoor_tasks', [])
 export const saveTasks = (t: Task[]) => write('alinoor_tasks', t)
 
@@ -317,22 +340,7 @@ export const saveStars = (s: Record<string, boolean>) =>
 export const uid = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 
-// yyyy-mm-dd for "now" in a specific IANA timezone
-export const dateInTz = (tz: string, d: Date = new Date()) => {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  return fmt.format(d)
-}
-
-export const addDays = (ymd: string, days: number) => {
-  const [y, m, d] = ymd.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, m - 1, d + days))
-  return dt.toISOString().slice(0, 10)
-}
+export { dateInTz, addDays } from '@/lib/dates'
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   spiritual: 'Spiritual',

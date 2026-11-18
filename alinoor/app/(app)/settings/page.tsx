@@ -7,11 +7,16 @@ import CityPicker from '@/app/components/CityPicker'
 import { findCity, utcOffsetLabel } from '@/lib/cities'
 import { supabase } from '@/lib/supabase'
 import { ADHAN_VOICES, adhanUrl } from '@/lib/adhan-audio'
+import { AI_MODELS } from '@/lib/ai-models'
 import {
   ADHAN_PRAYERS,
+  AiSettings,
   AppSettings,
+  DEFAULT_AI_SETTINGS,
   DEFAULT_SETTINGS,
+  loadAiSettings,
   loadSettings,
+  saveAiSettings,
   onSyncStatus,
   saveSettings,
   signOutAndClear,
@@ -32,10 +37,13 @@ export default function PageInner() {
   const [saved, setSaved] = useState(false)
   const [syncFailed, setSyncFailed] = useState(false)
   const [previewing, setPreviewing] = useState(false)
+  const [ai, setAi] = useState<AiSettings>(DEFAULT_AI_SETTINGS)
+  const [keyDraft, setKeyDraft] = useState('')
   const previewRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     setSettings(loadSettings())
+    setAi(loadAiSettings())
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     return onSyncStatus(setSyncFailed)
   }, [])
@@ -77,6 +85,14 @@ export default function PageInner() {
     },
     []
   )
+
+  const updateAi = (patch: Partial<AiSettings>) => {
+    const next = { ...ai, ...patch }
+    setAi(next)
+    saveAiSettings(next)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
+  }
 
   const logout = async () => {
     await signOutAndClear()
@@ -278,6 +294,84 @@ export default function PageInner() {
               </div>
             </>
           )}
+        </section>
+
+        {/* AI planner */}
+        <section className="bg-panel border border-line rounded-xl p-6 shadow-card">
+          <h2 className="font-semibold text-ink mb-1">AI planner</h2>
+          <p className="text-sm text-ink3 leading-relaxed max-w-xl mb-5">
+            Describe a day on the Today page and Claude plans or adjusts its
+            tasks around the prayers. Uses your own Anthropic API key, which
+            stays in this browser only: it isn&apos;t synced, and signing out
+            removes it.
+          </p>
+
+          <div className="mb-5">
+            <label className="microlabel block mb-2" htmlFor="ai-key">
+              Anthropic API key
+            </label>
+            {ai.apiKey ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[220px] px-4 py-2.5 border border-line rounded-lg bg-panel2 text-sm text-ink3 font-mono truncate">
+                  {ai.apiKey.slice(0, 10)}…{ai.apiKey.slice(-4)}
+                </div>
+                <button
+                  onClick={() => updateAi({ apiKey: '' })}
+                  className="px-4 py-2.5 border border-ember/40 text-ember rounded-lg text-sm font-medium hover:bg-ember/10 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!keyDraft.trim()) return
+                  updateAi({ apiKey: keyDraft.trim() })
+                  setKeyDraft('')
+                }}
+                className="flex flex-wrap items-center gap-3"
+              >
+                <input
+                  id="ai-key"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={keyDraft}
+                  onChange={(e) => setKeyDraft(e.target.value)}
+                  placeholder="sk-ant-…"
+                  className="flex-1 min-w-[220px] px-4 py-2.5 border border-line rounded-lg bg-panel text-ink text-sm font-mono placeholder:text-faint focus:outline-none focus:border-linestrong"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-ink text-bg rounded-lg text-sm font-medium"
+                >
+                  Save key
+                </button>
+              </form>
+            )}
+          </div>
+
+          <div>
+            <label className="microlabel block mb-2">Model</label>
+            <div className="flex flex-wrap gap-2">
+              {AI_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => updateAi({ model: m.id })}
+                  aria-pressed={ai.model === m.id}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    ai.model === m.id
+                      ? 'bg-ink text-bg border-ink'
+                      : 'border-line text-ink2 hover:border-linestrong'
+                  }`}
+                >
+                  {m.label}
+                  <span className="opacity-70 font-normal"> · {m.note}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Data note */}
