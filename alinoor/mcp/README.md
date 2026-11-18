@@ -27,12 +27,13 @@ install.
 
 1. In Claude, open **Settings → Connectors → Add custom connector**.
 2. Name it `AliNoor` and paste `https://www.alinoor.uz/api/mcp` as the URL.
-3. Click **Connect**. An AliNoor sign-in page opens; sign in with your AliNoor
-   email and password and allow access.
+3. Click **Connect**. An AliNoor sign-in page opens: choose **Continue with
+   Google**, or sign in with your AliNoor email and password.
 
 Claude can then use the tools below in any chat (turn the connector on from
 the chat's tools menu). It acts as you through your own Supabase session, so it
-only ever sees your data; your password is checked once and never stored. To
+only ever sees your data. Google sign-in gives the connector its own session,
+separate from your website login; a password is checked once and never stored. To
 disconnect, remove the connector in Claude; changing your AliNoor password also
 ends its access.
 

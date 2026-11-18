@@ -3,12 +3,17 @@
 // sealed code holding their Supabase session.
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../tools'
-import { Req, Res, parseClient, queryOf, readBody, seal } from '../oauth'
+import { Req, Res, codeRedirect, parseClient, queryOf, readBody, seal } from '../oauth'
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
-const page = (p: Record<string, string>, clientHost: string, error = '') => `<!doctype html>
+const page = (
+  p: Record<string, string>,
+  clientHost: string,
+  googleHref: string,
+  error = ''
+) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Connect AliNoor</title>
 <style>
@@ -21,16 +26,19 @@ label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase
 input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);font:inherit}
 button{margin-top:20px;width:100%;padding:11px;border:0;border-radius:9px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
 .err{color:var(--ember);font-size:14px;margin-top:14px}.note{font-size:12px;margin-top:16px}
+.google{display:block;text-align:center;padding:11px;border:1px solid var(--line);border-radius:9px;color:var(--ink);text-decoration:none;font-weight:600}
+.or{display:flex;align-items:center;gap:10px;color:var(--ink3);font-size:12px;margin:18px 0 0}.or::before,.or::after{content:'';flex:1;border-top:1px solid var(--line)}
 </style></head><body>
 <form method="post">
 <h1>Connect AliNoor</h1>
 <p><strong>${esc(clientHost)}</strong> wants to read and edit your AliNoor daily schedule.</p>
+<a class="google" href="${esc(googleHref)}">Continue with Google</a>
+<div class="or">or with email</div>
 ${Object.entries(p).map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`).join('')}
 <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required>
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
 ${error ? `<div class="err">${esc(error)}</div>` : ''}
 <button type="submit">Allow access</button>
-<p class="note">Signed up with Google? Set a password with "Forgot password" on the AliNoor login page first.</p>
 </form></body></html>`
 
 const PARAMS = ['response_type', 'client_id', 'redirect_uri', 'state', 'code_challenge', 'code_challenge_method', 'scope', 'resource']
@@ -55,6 +63,10 @@ export default async function handler(req: Req, res: Res) {
     return fail(400, 'PKCE with S256 is required.')
 
   const clientHost = new URL(p.redirect_uri).host
+  // Google sign-in runs on the website (/connect), which needs this request.
+  const googleHref = `/connect/?r=${encodeURIComponent(
+    seal({ t: 'pending', p, host: clientHost, iat: Date.now() })
+  )}`
   const html = (error = '', status = 200) => {
     res.writeHead(status, {
       'content-type': 'text/html; charset=utf-8',
@@ -62,7 +74,7 @@ export default async function handler(req: Req, res: Res) {
       'x-frame-options': 'DENY',
       'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
     })
-    res.end(page(p, clientHost, error))
+    res.end(page(p, clientHost, googleHref, error))
   }
 
   if (req.method !== 'POST') return html()
@@ -75,20 +87,8 @@ export default async function handler(req: Req, res: Res) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.session) return html('That email and password didn’t match an AliNoor account.', 401)
 
-  const code = seal({
-    t: 'code',
-    at: data.session.access_token,
-    rt: data.session.refresh_token,
-    exp: data.session.expires_at,
-    cc: p.code_challenge,
-    ru: p.redirect_uri,
-    cid: p.client_id,
-    iat: Date.now(),
-  })
-  const back = new URL(p.redirect_uri)
-  back.searchParams.set('code', code)
-  if (p.state) back.searchParams.set('state', p.state)
-  res.writeHead(302, { location: back.toString(), 'cache-control': 'no-store' })
+  const location = codeRedirect(p, data.session)
+  res.writeHead(302, { location, 'cache-control': 'no-store' })
   res.end()
 }
 

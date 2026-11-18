@@ -114,3 +114,34 @@ export const resourceMetadata = (base: string) => ({
   bearer_methods_supported: ['header'],
   resource_name: 'AliNoor',
 })
+
+// A validated authorize request, sealed so the Google sign-in detour through
+// the website can carry it without anyone editing where the code goes.
+export type PendingAuth = {
+  t: 'pending'
+  p: Record<string, string>
+  host: string
+  iat: number
+}
+
+export const PENDING_TTL_MS = 15 * 60 * 1000
+
+export type Session = { access_token: string; refresh_token: string; expires_at?: number }
+
+// The client's redirect URI with a sealed, short-lived code for this session.
+export const codeRedirect = (p: Record<string, string>, session: Session) => {
+  const code = seal({
+    t: 'code',
+    at: session.access_token,
+    rt: session.refresh_token,
+    exp: session.expires_at,
+    cc: p.code_challenge,
+    ru: p.redirect_uri,
+    cid: p.client_id,
+    iat: Date.now(),
+  })
+  const back = new URL(p.redirect_uri)
+  back.searchParams.set('code', code)
+  if (p.state) back.searchParams.set('state', p.state)
+  return back.toString()
+}

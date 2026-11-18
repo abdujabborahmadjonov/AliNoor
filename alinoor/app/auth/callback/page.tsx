@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { finishConnect, takePendingConnect } from '@/lib/mcp-connect'
 import { useRouter } from 'next/navigation'
 
 export default function AuthCallback() {
@@ -45,7 +46,20 @@ export default function AuthCallback() {
         hash.get('error_description') ||
         hash.get('error')
       if (errorDescription) {
+        takePendingConnect()
         setError(errorDescription)
+        return
+      }
+
+      // Google sign-in for the Claude connector: its own session, not the
+      // website's, then straight back to Claude.
+      const connect = takePendingConnect()
+      if (connect) {
+        try {
+          await finishConnect(connect, url.searchParams.get('code'))
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Couldn’t connect.')
+        }
         return
       }
 
